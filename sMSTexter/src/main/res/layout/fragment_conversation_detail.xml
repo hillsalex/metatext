@@ -1,0 +1,49 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/conversation_detail"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:textIsSelectable="true"
+    tools:context="hills.sms.texter.ConversationDetailFragment"
+    android:background="@drawable/greyBG" >
+
+    <android.support.v7.widget.RecyclerView
+        android:id="@+id/conversation_recycler_view"
+        android:layout_width="fill_parent"
+        android:layout_height="0dp"
+        android:layout_above="@+id/attach_button"
+        android:layout_alignParentTop="true"
+        android:scrollbars="vertical" />
+
+    <ImageButton
+        android:id="@+id/send_button"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"
+        android:onClick="sendTapped"
+        android:layout_margin="4dp"
+        android:background="@drawable/send_arrow" 
+        />
+
+    <ImageButton
+        android:id="@+id/attach_button"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        
+        android:layout_margin="4dp"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentLeft="true"
+        android:background="@drawable/abc_ic_commit_search_api_mtrl_alpha" />
+
+    <EditText
+        android:id="@+id/send_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignTop="@+id/send_button"
+        android:layout_toLeftOf="@+id/send_button"
+        android:layout_toRightOf="@+id/attach_button"
+        android:ems="10" />
+
+</RelativeLayout>

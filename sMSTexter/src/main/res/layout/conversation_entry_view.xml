@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res/hills.sms.texter"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+	android:background="@drawable/container_dropshadow"
+    android:id="@+id/conversation_entry_holder">
+	
+    <LinearLayout 
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        >
+
+    </LinearLayout>
+    <TextView
+        android:id="@+id/names"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginLeft="16dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginRight="16dp"
+        android:text="TextView"
+        android:textSize="12sp"
+        android:textStyle="normal"
+        android:textAlignment="gravity" />
+
+    <TextView
+        android:id="@+id/text_content"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/names"
+        android:layout_below="@+id/names"
+        android:layout_marginLeft="16dp"
+        android:layout_marginRight="16dp"
+        android:layout_marginBottom="8dp"
+        android:text="content"
+        android:textSize="12sp"
+        android:textStyle="normal"
+        android:textAlignment="gravity"
+         />
+
+    <View
+        android:id="@+id/left_divider"
+        android:layout_width="fill_parent"
+        android:layout_height="1dp"
+        android:layout_marginRight="72dp"
+        android:layout_alignParentLeft="true"
+        android:layout_below="@+id/text_content"
+        android:alpha="0"
+        android:background="#000000" />
+
+    <View
+        android:id="@+id/right_divider"
+        android:layout_width="fill_parent"
+        android:layout_height="1dp"
+        android:layout_marginLeft="72dp"
+        android:layout_alignParentLeft="true"
+        android:layout_below="@+id/text_content"
+        android:alpha="0"
+        android:background="#000000" />
+
+    <com.makeramen.RoundedImageView
+        android:id="@+id/message_thread_pic_0"
+        android:layout_width="fill_parent"
+        android:layout_height="100dp"
+        android:layout_alignLeft="@+id/text_content"
+        android:layout_alignTop="@+id/left_divider"
+        android:layout_marginTop="0dp"
+        android:layout_marginLeft="0dp"
+        android:layout_marginRight="16dp"
+        android:layout_marginBottom="8dp"
+        android:scaleType="centerInside"
+        android:src="@drawable/teal500"
+        app:riv_border_width="0dp"
+        app:riv_corner_radius="8dp"
+        app:riv_mutate_background="true"
+         />
+
+    <com.makeramen.RoundedImageView
+        android:id="@+id/message_thread_pic_1"
+        android:layout_width="fill_parent"
+        android:layout_height="100dp"
+        android:layout_below="@+id/message_thread_pic_0"
+        android:layout_alignLeft="@+id/text_content"
+        android:layout_marginTop="0dp"
+        android:layout_marginLeft="0dp"
+        android:layout_marginRight="16dp"
+        android:layout_marginBottom="8dp"
+        android:scaleType="centerInside"
+        android:src="@drawable/teal500"
+        app:riv_border_width="0dp"
+        app:riv_corner_radius="8dp"
+        app:riv_mutate_background="true" />
+
+</RelativeLayout>
