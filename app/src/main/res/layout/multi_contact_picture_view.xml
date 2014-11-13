@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="56dp"
+    android:layout_height="56dp"
+    android:layout_margin="4dp"
+    android:padding="4dp"
+    >
+    <!-- ONE CONTACT -->
+    <com.makeramen.RoundedImageView
+        android:id="@+id/contact_pic_0_0"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="@color/teal500"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentStart="true"
+        android:visibility="gone"
+        app:riv_oval="true" app:riv_border_width="0dp"
+        />
+
+
+    <!-- TWO CONTACTS -->
+    <com.makeramen.RoundedImageView
+        android:id="@+id/contact_pic_1_0"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:src="@color/teal500"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentStart="true"
+        android:visibility="gone"
+        app:riv_oval="true" app:riv_border_width="0dp"/>
+
+    <com.makeramen.RoundedImageView
+        android:id="@+id/contact_pic_1_1"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:src="@color/teal500"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentEnd="true"
+        android:visibility="gone"
+        app:riv_oval="true" app:riv_border_width="0dp"/>
+
+    <!-- 3 contacts -->
+
+    <com.makeramen.RoundedImageView
+        android:id="@+id/contact_pic_2_0"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:src="@color/teal500"
+        android:layout_centerHorizontal="true"
+        android:layout_alignParentTop="true"
+        android:visibility="gone"
+        app:riv_oval="true" app:riv_border_width="0dp"/>
+
+    <com.makeramen.RoundedImageView
+        android:id="@+id/contact_pic_2_1"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:src="@color/teal500"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentEnd="true"
+        android:visibility="gone"
+        app:riv_oval="true" app:riv_border_width="0dp"/>
+
+    <com.makeramen.RoundedImageView
+        android:id="@+id/contact_pic_2_2"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:src="@color/teal500"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentStart="true"
+        android:visibility="gone"
+        app:riv_oval="true" app:riv_border_width="0dp"/>
+
+    <!-- 4+ contacts -->
+    <com.makeramen.RoundedImageView
+        android:id="@+id/contact_pic_3_0"
+        android:layout_width="26dp"
+        android:layout_height="26dp"
+        android:padding="2dp"
+        android:src="@color/teal500"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentStart="true"
+        android:visibility="gone"
+        app:riv_oval="true" app:riv_border_width="0dp"/>
+
+    <com.makeramen.RoundedImageView
+        android:id="@+id/contact_pic_3_1"
+        android:layout_width="26dp"
+        android:layout_height="26dp"
+        android:padding="2dp"
+        android:src="@color/teal500"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:visibility="gone"
+        app:riv_oval="true" app:riv_border_width="0dp"/>
+
+    <com.makeramen.RoundedImageView
+        android:id="@+id/contact_pic_3_2"
+        android:layout_width="26dp"
+        android:layout_height="26dp"
+        android:padding="2dp"
+        android:src="@color/teal500"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentStart="true"
+        android:visibility="gone"
+        app:riv_oval="true" app:riv_border_width="0dp"/>
+    <com.makeramen.RoundedImageView
+        android:id="@+id/contact_pic_3_3"
+        android:layout_width="26dp"
+        android:layout_height="26dp"
+        android:padding="2dp"
+        android:src="@color/teal500"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentEnd="true"
+        android:visibility="gone"
+        app:riv_oval="true" app:riv_border_width="0dp"/>
+</RelativeLayout>
