@@ -6,11 +6,14 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.database.ContentObserver;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.provider.Telephony;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -34,8 +37,8 @@ import java.util.List;
 
 public class ThreadDetailViewActivity extends Activity {
 
-//    MmsSentHandler mmsSentHandler;
-//    SmsSentHandler smsSentHandler;
+    MmsSentHandler mmsSentHandler;
+    SmsSentHandler smsSentHandler;
     ThreadDetailViewActivity mInstance;
     ThreadDetailViewFragment fragment = null;
 
@@ -75,10 +78,13 @@ public class ThreadDetailViewActivity extends Activity {
     protected void onResume() {
         super.onResume();
         registerReceiver(threadUpdatedReceiver,new IntentFilter(StaticMessageStrings.NOTIFY_MESSAGE_RECEIVED));
-//        mmsSentHandler = new MmsSentHandler(null,this);
-//        smsSentHandler = new SmsSentHandler(null,this);
-//        getContentResolver().registerContentObserver(Telephony.Mms.CONTENT_URI,true,mmsSentHandler);
-//        getContentResolver().registerContentObserver(Telephony.Sms.CONTENT_URI,true,smsSentHandler);
+
+        registerReceiver(threadUpdatedReceiver,new IntentFilter(StaticMessageStrings.NOTIFY_MESSAGE_SENT));
+
+        mmsSentHandler = new MmsSentHandler(null,this);
+        smsSentHandler = new SmsSentHandler(null,this);
+        getContentResolver().registerContentObserver(Telephony.Mms.Outbox.CONTENT_URI,true,mmsSentHandler);
+        getContentResolver().registerContentObserver(Telephony.Sms.CONTENT_URI,true,smsSentHandler);
     }
 
     @Override
@@ -86,10 +92,10 @@ public class ThreadDetailViewActivity extends Activity {
         super.onPause();
 
         unregisterReceiver(threadUpdatedReceiver);
-//        getContentResolver().unregisterContentObserver(mmsSentHandler);
-//        getContentResolver().unregisterContentObserver(smsSentHandler);
-//        mmsSentHandler = null;
-//        smsSentHandler = null;
+        getContentResolver().unregisterContentObserver(mmsSentHandler);
+        getContentResolver().unregisterContentObserver(smsSentHandler);
+        mmsSentHandler = null;
+        smsSentHandler = null;
     }
 
     @Override
@@ -117,11 +123,75 @@ public class ThreadDetailViewActivity extends Activity {
 
         @Override
         public void onReceive(Context context, Intent intent) {
-            Uri uri = intent.getParcelableExtra(StaticMessageStrings.MESSAGE_RECEIVED_URI);
-            boolean hasSms = intent.hasExtra(StaticMessageStrings.MESSAGE_RECEIVED_IS_SMS);
-            if (uri==null || hasSms == false) return;
-            boolean isSms = intent.getBooleanExtra(StaticMessageStrings.MESSAGE_RECEIVED_IS_SMS,false);
-            fragment.notifyNewMessage(uri,isSms);
+            Uri uri;
+            boolean isSms;
+            switch (intent.getAction()) {
+                case StaticMessageStrings.NOTIFY_MESSAGE_RECEIVED:
+                    uri = intent.getParcelableExtra(StaticMessageStrings.MESSAGE_RECEIVED_URI);
+                    boolean hasSms = intent.hasExtra(StaticMessageStrings.MESSAGE_RECEIVED_IS_SMS);
+                    if (uri == null || hasSms == false) return;
+                    isSms = intent.getBooleanExtra(StaticMessageStrings.MESSAGE_RECEIVED_IS_SMS, false);
+                    fragment.notifyNewMessage(uri, isSms);
+                    break;
+                case StaticMessageStrings.NOTIFY_MESSAGE_SENT:
+                    uri = intent.getParcelableExtra(StaticMessageStrings.MESSAGE_SENT_URI);
+                    isSms = !(uri.toString().startsWith(Uri.parse("content://mms").toString()));
+                    if (!isSms) {
+                        MmsMessageModel model = ActiveDatabases.getMmsDatabase(mInstance).getMessageForThreadView(uri);
+                        int av=0;
+                        av++;
+                    } else {
+                        SmsMessageModel model = ActiveDatabases.getSmsDatabase(mInstance).getMessageForThreadView(uri);
+                        int j=0;
+                        j++;
+                    }
+
+                    break;
+            }
         }
     };
+
+    private class MmsSentHandler extends ContentObserver {
+        Context mContext;
+        /**
+         * Creates a content observer.
+         *
+         * @param handler The handler to run {@link #onChange} on, or null if none.
+         */
+        public MmsSentHandler(Handler handler, Context context) {
+            super(handler);
+            mContext=context;
+        }
+
+        @Override
+        public void onChange(boolean selfChange, Uri uri) {
+            super.onChange(selfChange, uri);
+            Log.d("ThreadDetailView",uri.getPath());
+            /*MessageModel model = ActiveDatabases.getMmsDatabase(mContext).getMessageForThreadView(uri);
+            if (model.fromMe) fragment.notifyNewMessage(uri,false);*/
+        }
+    }
+
+    private class SmsSentHandler extends ContentObserver{
+        Context mContext;
+        /**
+         * Creates a content observer.
+         *
+         * @param handler The handler to run {@link #onChange} on, or null if none.
+         */
+        public SmsSentHandler(Handler handler, Context context) {
+            super(handler);
+            mContext=context;
+        }
+
+
+
+        @Override
+        public void onChange(boolean selfChange, Uri uri) {
+            super.onChange(selfChange, uri);
+            /*
+            MessageModel model = ActiveDatabases.getSmsDatabase(mContext).getMessageForThreadView(uri);
+            if (model.fromMe) fragment.notifyNewMessage(uri,true);*/
+        }
+    }
 }

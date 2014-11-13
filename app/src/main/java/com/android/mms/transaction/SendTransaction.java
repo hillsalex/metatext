@@ -34,6 +34,7 @@ import com.google.android.mms.pdu_alt.PduParser;
 import com.google.android.mms.pdu_alt.PduPersister;
 import com.google.android.mms.pdu_alt.SendConf;
 import com.google.android.mms.pdu_alt.SendReq;
+import com.hillsalex.metatext.StaticMessageStrings;
 import com.klinker.android.logger.Log;
 import com.klinker.android.send_message.Utils;
 
@@ -161,6 +162,11 @@ public class SendTransaction extends Transaction implements Runnable {
 
             mTransactionState.setState(TransactionState.SUCCESS);
             mTransactionState.setContentUri(uri);
+
+            Intent sentIntent = new Intent(StaticMessageStrings.NOTIFY_MESSAGE_SENT);
+            sentIntent.putExtra(StaticMessageStrings.MESSAGE_SENT_URI,uri);
+            mContext.sendBroadcast(sentIntent);
+
         } catch (Throwable t) {
             Log.e(TAG, android.util.Log.getStackTraceString(t));
         } finally {

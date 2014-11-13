@@ -8,4 +8,9 @@ public class StaticMessageStrings {
     public static final String MESSAGE_RECEIVED_URI = "message_uri";
     public static final String MESSAGE_RECEIVED_IS_SMS = "is_sms";
 
+
+    public static final String NOTIFY_MESSAGE_SENT = "com.hillsalex.metatext.MESSAGE_SENT";
+    public static final String MESSAGE_SENT_URI = "message_uri";
+
+
 }

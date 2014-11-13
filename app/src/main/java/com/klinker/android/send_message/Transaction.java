@@ -84,6 +84,8 @@ public class Transaction {
 
     public static final long NO_THREAD_ID = 0;
 
+    public int tempMessageId = Integer.MIN_VALUE;
+
     /**
      * Sets context and initializes settings to default values
      *
@@ -109,6 +111,11 @@ public class Transaction {
         if (NOTIFY_SMS_FAILURE.equals(".NOTIFY_SMS_FAILURE")) {
             NOTIFY_SMS_FAILURE = context.getPackageName() + NOTIFY_SMS_FAILURE;
         }
+    }
+
+    public Transaction(Context context, Settings settings, int temporaryId){
+        this(context,settings);
+        this.tempMessageId = temporaryId;
     }
 
     /**
@@ -164,6 +171,7 @@ public class Transaction {
             // save the message for each of the addresses
             for (int i = 0; i < addresses.length; i++) {
                 Calendar cal = Calendar.getInstance();
+
                 ContentValues values = new ContentValues();
                 values.put("address", addresses[i]);
                 values.put("body", settings.getStripUnicode() ? StripAccents.stripAccents(text) : text);

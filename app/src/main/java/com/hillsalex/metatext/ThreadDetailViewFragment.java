@@ -51,6 +51,10 @@ public class ThreadDetailViewFragment extends Fragment {
     View mRootView;
     LinearLayoutManager layoutManager;
 
+    public static final String MESSAGE_SENDING_ACTION = "detailview.sendingMessage";
+    public static final String MESSAGE_SENT_ACTION = "detailview.sentMessage";
+
+
     public ThreadDetailViewFragment() {
     }
 
@@ -278,30 +282,25 @@ public class ThreadDetailViewFragment extends Fragment {
         }
 
         public void updateThread(MessageModel model) {
-            int oldIndex = -1;
             int i = 0;
             for (MessageModel m : mDataset) {
-                if (m.threadId == model.threadId)
-                    oldIndex = i;
+                if (m.id==model.id)
+                    return;
+                if (m.date < model.date)
+                    break;
                 i++;
             }
-            boolean isScrolled = layoutManager.findFirstVisibleItemPosition()==0;
-            if (oldIndex == -1) {
-                mDataset.add(0, model);
-                notifyItemInserted(0);
-            } else {
-                mDataset.remove(oldIndex);
-                mDataset.add(0, model);
-                notifyItemMoved(oldIndex, 0);
-                notifyItemChanged(0);
-                if (!isScrolled) {
-                    getActivity().runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            layoutManager.scrollToPosition(0);
-                        }
-                    });
-                }
+
+            boolean isScrolled = !(layoutManager.findFirstVisibleItemPosition()==0);
+            mDataset.add(i, model);
+            notifyItemInserted(i);
+            if (!isScrolled && i==0) {
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        layoutManager.scrollToPosition(0);
+                    }
+                });
             }
         }
 

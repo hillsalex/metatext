@@ -88,7 +88,7 @@ public class MmsMessageModel extends MessageModel{
         Cursor cAdd = resolver.query(uriAddress,null,selectionAdd,null,null);
         List<String> toReturn = new ArrayList<>();
         boolean me = false;
-        if (cAdd.moveToFirst()){
+        if (cAdd!= null && cAdd.moveToFirst()){
             do {
                 String number = cAdd.getString(cAdd.getColumnIndex("address"));
                 if (number.equals("insert-address-token")){
