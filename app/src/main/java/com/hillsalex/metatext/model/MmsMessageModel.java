@@ -26,16 +26,29 @@ public class MmsMessageModel extends MessageModel{
 
     public ArrayList<Uri> mImageUris = new ArrayList<>();
 
-    public MmsMessageModel(long id, long date, long threadId,boolean fromMe){
-        super(id, new String[]{},date, threadId,fromMe);
+
+    public MmsMessageModel(long id, long date, long threadId,boolean fromMe,boolean read){
+        super(id, new String[]{},date, threadId,fromMe,read);
         try {
             resolveMessage();
-            if (!fromMe) {
+            /*if (!fromMe && this.contactList.size()>0) {
                 this.senderContact = this.contactList.get(0);
-            }
+            }*/
         } catch (ActiveDatabases.NeedActiveContextException e) {
             e.printStackTrace();
         }
+    }
+
+    private MmsMessageModel(long id, String[] recipients, long date, long threadId, boolean fromMe){
+        super(-1,recipients,date,threadId,fromMe,true);
+    }
+
+    public static MmsMessageModel getFakeMmsMessageModel(String[] recipients, long date, long threadId, boolean fromMe, ArrayList<Uri> imageUris){
+        MmsMessageModel m = new MmsMessageModel(-1l,recipients,date,threadId,fromMe);
+        m.isFake=true;
+        m.status=STATUS_SENDING;
+        m.mImageUris = imageUris;
+        return m;
     }
 
     private void resolveMessage() throws ActiveDatabases.NeedActiveContextException {
@@ -82,15 +95,17 @@ public class MmsMessageModel extends MessageModel{
         } catch (ActiveDatabases.NeedActiveContextException e) {
             e.printStackTrace();
         }
+
+        final String[] projection = new String[]{"address","type"};
         String selectionAdd = new String("msg_id="+id);
-        String uriStr = MessageFormat.format("content://mms/{0}/addr",id);
+        String uriStr = "content://mms/"+id+"/addr";
         Uri uriAddress = Uri.parse(uriStr);
-        Cursor cAdd = resolver.query(uriAddress,null,selectionAdd,null,null);
+        Cursor cAdd = resolver.query(uriAddress,projection,selectionAdd,null,null);
         List<String> toReturn = new ArrayList<>();
         boolean me = false;
         if (cAdd!= null && cAdd.moveToFirst()){
             do {
-                String number = cAdd.getString(cAdd.getColumnIndex("address"));
+                String number = cAdd.getString(0);
                 if (number.equals("insert-address-token")){
                     me=true;
                 }
@@ -98,6 +113,9 @@ public class MmsMessageModel extends MessageModel{
                 {
                 }
                 else {
+                    if (cAdd.getInt(1)==137){
+                        senderContact = Contact.get(number,true);
+                    }
                     toReturn.add(number);
                 }
             } while (cAdd.moveToNext());

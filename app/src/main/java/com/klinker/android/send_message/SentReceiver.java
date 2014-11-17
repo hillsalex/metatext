@@ -23,7 +23,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
+import android.support.v4.content.LocalBroadcastManager;
 import android.telephony.SmsManager;
+
+import com.hillsalex.metatext.StaticMessageStrings;
 import com.klinker.android.logger.Log;
 
 public class SentReceiver extends BroadcastReceiver {
@@ -52,6 +55,13 @@ public class SentReceiver extends BroadcastReceiver {
                         values.put("type", 2);
                         values.put("read", 1);
                         context.getContentResolver().update(uri, values, null, null);
+
+
+                        Intent newIntent = new Intent(StaticMessageStrings.NOTIFY_SENDING_MESSAGE_SENT);
+                        newIntent.putExtra(StaticMessageStrings.MESSAGE_INTERNAL_ID,intent.getIntExtra(StaticMessageStrings.MESSAGE_INTERNAL_ID,-1));
+                        newIntent.putExtra(StaticMessageStrings.MESSAGE_IS_SMS,true);
+                        newIntent.putExtra(StaticMessageStrings.MESSAGE_URI,uri);
+                        LocalBroadcastManager.getInstance(context).sendBroadcast(newIntent);
                     } catch (NullPointerException e) {
                         markFirstAsSent(context);
                     }

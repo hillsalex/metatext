@@ -112,7 +112,7 @@ public class ThreadListFragment extends ListFragment {
                     threadId = nextItem.first.getLong(0);
                     if (!threadIds.contains(threadId)) {
                         Long date = nextItem.first.getLong(1);
-                        MmsMessageModel mms = new MmsMessageModel(nextItem.first.getLong(3),date,threadId,false);
+                        MmsMessageModel mms = new MmsMessageModel(nextItem.first.getLong(3),date,threadId,false,false);
                         /*
                         Messages.MMSMessage message = new Messages.MMSMessage(nextItem.first.getInt(3),(int)threadId);
                         TexterHelper.populateMMS(getActivity().getContentResolver(), message);
@@ -131,11 +131,11 @@ public class ThreadListFragment extends ListFragment {
                         String body = nextItem.first.getString(5);
                         Long date=nextItem.first.getLong(1);
                         boolean isMe = false;
-                        if (nextItem.first.getInt(4)==2)
+                        if (SmsMessageModel.isFromMe(nextItem.first.getInt(4)))
                         {
                             isMe = true;
                         }
-                        SmsMessageModel sms = new SmsMessageModel(id,address,date,threadId,body,isMe);
+                        SmsMessageModel sms = new SmsMessageModel(id,address,date,threadId,body,isMe,false);
                         mMessages.add(sms);
                         /*
                         ContactsHelper.Contact c =ContactsHelper.getContactInfo(getActivity().getContentResolver(),nextItem.first.getString(3));

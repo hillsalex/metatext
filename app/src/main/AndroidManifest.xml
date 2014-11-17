@@ -50,6 +50,20 @@
             </intent-filter>
         </receiver>
 
+        <receiver android:name="com.klinker.android.send_message.SentReceiver"
+            >
+            <intent-filter>
+                <action android:name="com.hillsalex.metatext.SMS_SENT" />
+            </intent-filter>
+        </receiver>
+
+        <receiver android:name="com.klinker.android.send_message.DeliveredReceiver" >
+            <intent-filter>
+                <action android:name="com.hillsalex.metatext.SMS_DELIVERED" />
+            </intent-filter>
+        </receiver>
+
+
         <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
         <!-- CUSTOM RECEIVERS -->
 
@@ -122,5 +136,6 @@
                 android:value="com.hillsalex.metatext.ThreadListViewActivity" />
         </activity>
     </application>
+
 
 </manifest>

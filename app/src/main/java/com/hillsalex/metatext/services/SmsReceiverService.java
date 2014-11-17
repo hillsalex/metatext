@@ -106,7 +106,7 @@ public class SmsReceiverService extends Service {
         msg.arg1 = startId;
         msg.obj = intent;
         mServiceHandler.sendMessage(msg);
-        return Service.START_NOT_STICKY;
+        return Service.START_STICKY;
     }
 
     private static String translateResultCode(int resultCode) {
@@ -196,14 +196,16 @@ public class SmsReceiverService extends Service {
 
 
 
+            Log.v("SmsReceiver","Uri is:"+(messageUri==null ? null : messageUri.toString()));
+            if (messageUri!=null && messageUri.toString().startsWith("content://")) {
+                NotificationFactory.makeNotificationForSms(this, ActiveDatabases.getSmsDatabase(this).getMessageForThreadView(messageUri));
 
-            NotificationFactory.makeNotificationForSms(this, ActiveDatabases.getSmsDatabase(this).getMessageForThreadView(messageUri));
-
-            Intent threadUpdatedIntent = new Intent(StaticMessageStrings.NOTIFY_MESSAGE_RECEIVED);
-            threadUpdatedIntent.setFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES);
-            threadUpdatedIntent.putExtra(StaticMessageStrings.MESSAGE_RECEIVED_URI,messageUri);
-            threadUpdatedIntent.putExtra(StaticMessageStrings.MESSAGE_RECEIVED_IS_SMS,true);
-            this.sendBroadcast(threadUpdatedIntent);
+                Intent threadUpdatedIntent = new Intent(StaticMessageStrings.NOTIFY_MESSAGE_RECEIVED);
+                threadUpdatedIntent.setFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES);
+                threadUpdatedIntent.putExtra(StaticMessageStrings.MESSAGE_RECEIVED_URI, messageUri);
+                threadUpdatedIntent.putExtra(StaticMessageStrings.MESSAGE_IS_SMS, true);
+                this.sendBroadcast(threadUpdatedIntent);
+            }
         }
     }
 

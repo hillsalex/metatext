@@ -201,9 +201,9 @@ public class RetrieveTransaction extends Transaction implements Runnable {
         if(mTransactionState.getState() != TransactionState.FAILED)
         {
             Intent threadUpdatedIntent = new Intent(StaticMessageStrings.NOTIFY_MESSAGE_RECEIVED);
-            threadUpdatedIntent.setFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES);
+            threadUpdatedIntent.putExtra("debug","RetrieveTransaction");
             threadUpdatedIntent.putExtra(StaticMessageStrings.MESSAGE_RECEIVED_URI,messageUri);
-            threadUpdatedIntent.putExtra(StaticMessageStrings.MESSAGE_RECEIVED_IS_SMS,false);
+            threadUpdatedIntent.putExtra(StaticMessageStrings.MESSAGE_IS_SMS,false);
             mContext.sendBroadcast(threadUpdatedIntent);
         }
         mContext.sendBroadcast(new Intent(com.klinker.android.send_message.Transaction.NOTIFY_OF_MMS));

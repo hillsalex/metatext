@@ -1,17 +1,26 @@
 package com.hillsalex.metatext;
 
+import android.app.AlertDialog;
 import android.app.Fragment;
 import android.app.NotificationManager;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.database.ContentObserver;
 import android.database.Cursor;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.provider.Telephony;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.util.Pair;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.telephony.SmsManager;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -20,14 +29,12 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.android.mms.transaction.TransactionSettings;
 import com.hillsalex.metatext.database.ActiveDatabases;
 import com.hillsalex.metatext.database.SortMultipleCursor;
 import com.hillsalex.metatext.model.Contact;
 import com.hillsalex.metatext.model.MessageModel;
 import com.hillsalex.metatext.model.MmsMessageModel;
 import com.hillsalex.metatext.model.SmsMessageModel;
-import com.klinker.android.logger.Log;
 import com.klinker.android.send_message.Message;
 import com.klinker.android.send_message.Settings;
 import com.klinker.android.send_message.Transaction;
@@ -37,7 +44,9 @@ import com.squareup.picasso.Picasso;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
+import java.util.Random;
 
 /**
  * Created by alex on 11/11/2014.
@@ -50,9 +59,51 @@ public class ThreadDetailViewFragment extends Fragment {
     boolean titleSet = false;
     View mRootView;
     LinearLayoutManager layoutManager;
+    Random mRandom = new Random(Calendar.getInstance().getTimeInMillis());
 
-    public static final String MESSAGE_SENDING_ACTION = "detailview.sendingMessage";
-    public static final String MESSAGE_SENT_ACTION = "detailview.sentMessage";
+    RecyclerView recyclerView;
+
+    ContentObserver smsSentByOtherProcessHandler;
+
+
+    @Override
+    public void onResume() {
+        super.onResume();
+
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(StaticMessageStrings.NOTIFY_MESSAGE_RECEIVED);
+        filter.addAction(StaticMessageStrings.NOTIFY_SENDING_MESSAGE_PROGRESS);
+        filter.addAction(StaticMessageStrings.NOTIFY_SENDING_MESSAGE_FAILED);
+        filter.addAction(StaticMessageStrings.NOTIFY_SENDING_MESSAGE_SENT);
+
+
+        smsSentByOtherProcessHandler = new SmsSentByOtherProcessHandler(null,getActivity());
+        getActivity().getContentResolver().registerContentObserver(Telephony.Sms.CONTENT_URI,true,smsSentByOtherProcessHandler);
+
+        LocalBroadcastManager.getInstance(getActivity()).registerReceiver(threadUpdatedReceiver, filter);
+        //mmsSentHandler = new MmsSentHandler(null,this);
+        //smsSentHandler = new SmsSentHandler(null,this);
+        //getContentResolver().registerContentObserver(Telephony.Mms.Outbox.CONTENT_URI,true,mmsSentHandler);
+        //getContentResolver().registerContentObserver(Telephony.Sms.CONTENT_URI,true,smsSentHandler);
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        try {
+            LocalBroadcastManager.getInstance(getActivity()).unregisterReceiver(threadUpdatedReceiver);
+            getActivity().getContentResolver().unregisterContentObserver(smsSentByOtherProcessHandler);
+            smsSentByOtherProcessHandler = null;
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+        //getContentResolver().unregisterContentObserver(mmsSentHandler);
+        //getContentResolver().unregisterContentObserver(smsSentHandler);
+        //mmsSentHandler = null;
+        //smsSentHandler = null;
+    }
 
 
     public ThreadDetailViewFragment() {
@@ -64,50 +115,67 @@ public class ThreadDetailViewFragment extends Fragment {
         View rootView = inflater.inflate(R.layout.fragment_thread_detail_view, container, false);
         mRootView = rootView;
         threadId = getArguments().getLong("threadId");
-        if (getArguments().containsKey("titleSet")){
+        if (getArguments().containsKey("titleSet")) {
             titleSet = getArguments().getBoolean("titleSet");
         }
-        if (getArguments().getBoolean("cameFromNotification")){
-            NotificationManager manager = (NotificationManager) getActivity().getSystemService(Context.NOTIFICATION_SERVICE);
-            manager.cancel((int)threadId);
-        }
-        RecyclerView recyclerView = (RecyclerView) rootView.findViewById(R.id.thread_detail_view_recycler_view);
+        NotificationManager manager = (NotificationManager) getActivity().getSystemService(Context.NOTIFICATION_SERVICE);
+        manager.cancel((int) threadId);
+
+        recyclerView = (RecyclerView) rootView.findViewById(R.id.thread_detail_view_recycler_view);
         recyclerView.setHasFixedSize(false);
-        layoutManager= new LinearLayoutManager(rootView.getContext(), LinearLayoutManager.VERTICAL, true);
+        layoutManager = new LinearLayoutManager(rootView.getContext(), LinearLayoutManager.VERTICAL, true);
         recyclerView.setLayoutManager(layoutManager);
         adapter = new ThreadDetailViewAdapter(new ArrayList<MessageModel>());
         recyclerView.setAdapter(adapter);
+
+        ActiveDatabases.getMmsSmsDatabase(getActivity()).markThreadAsRead(threadId);
 
         LoadConvo();
 
         InputMethodManager imm = (InputMethodManager) getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
         imm.hideSoftInputFromWindow(rootView.getWindowToken(), 0);
 
+        ((ImageView) rootView.findViewById(R.id.attach_message_button)).setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                Settings s = Utils.getDefaultSendSettings(getActivity());
+                Transaction t = new Transaction(getActivity(), s);
+                Message message;
+
+                message = new Message("Test","4242424419", BitmapFactory.decodeResource(getResources(),R.drawable.abs__ic_search));
+                Log.v("ThreadDetailView", "New message, tempId: " + t.getTempMessageId());
+                t.sendNewMessage(message,0);
+            }
+        });
+
         ((ImageView) rootView.findViewById(R.id.send_message_button)).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                EditText textView = (EditText)mRootView.findViewById(R.id.message_to_send_text);
+                EditText textView = (EditText) mRootView.findViewById(R.id.message_to_send_text);
                 if (textView != null) {
                     String toSend = textView.getText().toString();
                     textView.setText("");
+                    if (toSend.equals("")) return;
 
                     InputMethodManager imm = (InputMethodManager) getActivity().getSystemService(Context.INPUT_METHOD_SERVICE);
                     if (imm.isAcceptingText()) { // verify if the soft keyboard is open
                         imm.hideSoftInputFromWindow(getActivity().getCurrentFocus().getWindowToken(), 0);
                     }
-                    Log.v("TreadDetailViewFrag",toSend);
+                    Log.v("TreadDetailViewFrag", toSend);
 
-                    String[] addresses =adapter.getAddresses();
-                    if (addresses!=null && addresses.length>0) {
+                    String[] addresses = adapter.getAddresses();
+                    if (addresses != null && addresses.length > 0) {
                         Settings s = Utils.getDefaultSendSettings(getActivity());
-                        Transaction t = new Transaction(getActivity(),s);
+                        Transaction t = new Transaction(getActivity(), s);
                         Message message;
-                        if (addresses.length>1)
-                            message = new Message(toSend,addresses);
-                        else{
-                            message = new Message(toSend,addresses[0]);
+                        int tempId = mRandom.nextInt(Integer.MAX_VALUE / 2);
+                        if (addresses.length > 1) {
+                            message = new Message(toSend, addresses);
+                            message.setTempId(tempId);
+                        } else {
+                            message = new Message(toSend, addresses[0]);
+                            message.setTempId(tempId);
                         }
-                        t.sendNewMessage(message,adapter.getThreadId());
+                        t.sendNewMessage(message, adapter.getThreadId());
                     }
                 }
             }
@@ -122,6 +190,7 @@ public class ThreadDetailViewFragment extends Fragment {
     private class LoaderTask extends AsyncTask<SortMultipleCursor, SortMultipleCursor, Pair<List<MessageModel>, SortMultipleCursor>> {
         @Override
         protected Pair<List<MessageModel>, SortMultipleCursor> doInBackground(SortMultipleCursor... params) {
+            Log.v("ThreadDetailVewFrag","Loader task doInBackground started");
             List<MessageModel> models = new ArrayList<>();
             SortMultipleCursor cursor = params[0];
             int count = 0;
@@ -132,7 +201,7 @@ public class ThreadDetailViewFragment extends Fragment {
 
                     if (nextItem.second == 0) {
                         Long date = nextItem.first.getLong(2);
-                        MmsMessageModel mms = new MmsMessageModel(nextItem.first.getLong(1), date, threadId, nextItem.first.getInt(8) == Telephony.Mms.MESSAGE_BOX_SENT);
+                        MmsMessageModel mms = new MmsMessageModel(nextItem.first.getLong(1), date, threadId, nextItem.first.getInt(8) == Telephony.Mms.MESSAGE_BOX_SENT, nextItem.first.getInt(10) == 1);
                         models.add(mms);
                     } else {
                         Long id = nextItem.first.getLong(1);
@@ -140,10 +209,10 @@ public class ThreadDetailViewFragment extends Fragment {
                         String body = nextItem.first.getString(4);
                         Long date = nextItem.first.getLong(2);
                         boolean isMe = false;
-                        if (nextItem.first.getInt(6) == 2) {
+                        if (SmsMessageModel.isFromMe(nextItem.first.getInt(6))) {
                             isMe = true;
                         }
-                        SmsMessageModel sms = new SmsMessageModel(id, address, date, threadId, body, isMe);
+                        SmsMessageModel sms = new SmsMessageModel(id, address, date, threadId, body, isMe, nextItem.first.getInt(8) == 1);
                         models.add(sms);
                     }
                     count++;
@@ -152,14 +221,16 @@ public class ThreadDetailViewFragment extends Fragment {
                 }
 
             }
+            Log.v("ThreadDetailVewFrag","Loader finished loading 10");
             return new Pair<>(models, cursor);
         }
 
         @Override
         protected void onPostExecute(Pair<List<MessageModel>, SortMultipleCursor> models) {
             super.onPostExecute(models);
+            Log.v("ThreadDetailVewFrag", "Loader on post-execute");
             try {
-                    if (getActivity() != null) {
+                if (getActivity() != null) {
                     getActivity().runOnUiThread(new AddElementsRunnable(adapter, models.first));
                     if (!(models.first.size() < 10)) {
                         LoaderTask task = new LoaderTask();
@@ -171,7 +242,88 @@ public class ThreadDetailViewFragment extends Fragment {
             } catch (NullPointerException e) {
                 Log.d("DetailViewFragment", "Activity stopped before we could continue");
             }
+        }
+    }
 
+
+    private class SmsSentByOtherProcessHandler extends ContentObserver {
+        Context mContext;
+        /**
+         * Creates a content observer.
+         *
+         * @param handler The handler to run {@link #onChange} on, or null if none.
+         */
+        public SmsSentByOtherProcessHandler(Handler handler, Context context) {
+            super(handler);
+            mContext=context;
+        }
+
+
+
+        @Override
+        public void onChange(boolean selfChange, Uri uri) {
+            super.onChange(selfChange, uri);
+            if (uri!=null && !uri.getPath().equals("/raw")){
+                notifyNewMessageFromOther(uri, true);
+            }
+        }
+    }
+    private BroadcastReceiver threadUpdatedReceiver = new BroadcastReceiver() {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Uri uri;
+            boolean isSms;
+
+            switch (intent.getAction()) {
+                case StaticMessageStrings.NOTIFY_MESSAGE_RECEIVED:
+                    uri = intent.getParcelableExtra(StaticMessageStrings.MESSAGE_RECEIVED_URI);
+                    boolean hasSms = intent.hasExtra(StaticMessageStrings.MESSAGE_IS_SMS);
+                    if (uri == null || hasSms == false || uri.toString().equals("/raw")) return;
+                    isSms = intent.getBooleanExtra(StaticMessageStrings.MESSAGE_IS_SMS, false);
+                    notifyNewMessage(uri, isSms);
+                    break;
+                case StaticMessageStrings.NOTIFY_SENDING_MESSAGE_SENT:
+                    int id = intent.getIntExtra(StaticMessageStrings.MESSAGE_INTERNAL_ID,-1);
+                    isSms = intent.getBooleanExtra(StaticMessageStrings.MESSAGE_IS_SMS, false);
+                    uri = intent.getParcelableExtra(StaticMessageStrings.MESSAGE_URI);
+                    if (isSms && uri!=null && !uri.toString().equals("/raw")){
+                        //notifyNewMessage(uri,true);
+                    }
+                    /*
+
+                        Intent newIntent = new Intent(StaticMessageStrings.NOTIFY_SENDING_MESSAGE_SENT);
+                        newIntent.putExtra(StaticMessageStrings.MESSAGE_INTERNAL_ID,intent.getIntExtra(StaticMessageStrings.MESSAGE_INTERNAL_ID,-10));
+                        newIntent.putExtra(StaticMessageStrings.MESSAGE_URI,uri);
+                        newIntent.putExtra(StaticMessageStrings.MESSAGE_IS_SMS,true);
+
+                        LocalBroadcastManager.getInstance(context).sendBroadcast(newIntent);
+                     */
+                    //SmsMessageModel model = ActiveDatabases.getSmsDatabase(mInstance).getMessageForThreadView(uri);
+                    break;
+                case StaticMessageStrings.NOTIFY_SENDING_MESSAGE_FAILED:
+
+                    break;
+                case StaticMessageStrings.NOTIFY_SENDING_MESSAGE_PROGRESS:
+
+                    break;
+            }
+        }
+    };
+
+
+    public class AddElementsToFrontAndScrollRunnable implements Runnable {
+        MessageModel mModel;
+        ThreadDetailViewAdapter self;
+
+        public AddElementsToFrontAndScrollRunnable(ThreadDetailViewAdapter adapter, MessageModel model){
+            mModel=model;
+            self = adapter;
+        }
+
+        @Override
+        public void run() {
+            self.updateThread(mModel);
         }
     }
 
@@ -194,16 +346,34 @@ public class ThreadDetailViewFragment extends Fragment {
         }
     }
 
-    public void notifyNewMessage(Uri uri, boolean isSms){
+    public void notifyNewMessageFromOther(Uri uri, boolean isSms){
+        if (!isSms) {
+            MmsMessageModel model = ActiveDatabases.getMmsDatabase(getActivity()).getMessageForThreadView(uri);
+            if (model.threadId == threadId && !model.fromMe) {
+                ActiveDatabases.getMmsSmsDatabase(getActivity()).markThreadAsRead(threadId);
+                getActivity().runOnUiThread(new AddElementsToFrontAndScrollRunnable(adapter,model));
+            }
+        } else {
+            SmsMessageModel model = ActiveDatabases.getSmsDatabase(getActivity()).getMessageForThreadView(uri);
+            if (model.threadId == threadId && !model.fromMe) {
+                ActiveDatabases.getMmsSmsDatabase(getActivity()).markThreadAsRead(threadId);
+                getActivity().runOnUiThread(new AddElementsToFrontAndScrollRunnable(adapter,model));
+            }
+        }
+    }
+
+    public void notifyNewMessage(Uri uri, boolean isSms) {
         if (!isSms) {
             MmsMessageModel model = ActiveDatabases.getMmsDatabase(getActivity()).getMessageForThreadView(uri);
             if (model.threadId == threadId) {
-                adapter.updateThread(model);
+                ActiveDatabases.getMmsSmsDatabase(getActivity()).markThreadAsRead(threadId);
+                getActivity().runOnUiThread(new AddElementsToFrontAndScrollRunnable(adapter,model));
             }
         } else {
             SmsMessageModel model = ActiveDatabases.getSmsDatabase(getActivity()).getMessageForThreadView(uri);
             if (model.threadId == threadId) {
-                adapter.updateThread(model);
+                ActiveDatabases.getMmsSmsDatabase(getActivity()).markThreadAsRead(threadId);
+                getActivity().runOnUiThread(new AddElementsToFrontAndScrollRunnable(adapter,model));
             }
         }
     }
@@ -211,6 +381,7 @@ public class ThreadDetailViewFragment extends Fragment {
     public void LoadConvo() {
 
         try {
+            Log.v("ThreadDetailVewFrag","New loader task created");
             LoaderTask task = new LoaderTask();
             SortMultipleCursor cursor = ActiveDatabases.getMmsSmsDatabase(getActivity()).getConversation(threadId);
             task.execute(cursor);
@@ -227,7 +398,7 @@ public class ThreadDetailViewFragment extends Fragment {
                 Pair<Cursor, Integer> nextItem = cursor.next();
                 if (nextItem.second == 0) {
                     Long date = nextItem.first.getLong(2);
-                    MmsMessageModel mms = new MmsMessageModel(nextItem.first.getLong(1), date, threadId, nextItem.first.getInt(8) == Telephony.Mms.MESSAGE_BOX_SENT);
+                    MmsMessageModel mms = new MmsMessageModel(nextItem.first.getLong(1), date, threadId, nextItem.first.getInt(8) == Telephony.Mms.MESSAGE_BOX_SENT, nextItem.first.getInt(10) == 1);
                     mMessages.add(mms);
                 } else {
                     Long id = nextItem.first.getLong(1);
@@ -235,10 +406,10 @@ public class ThreadDetailViewFragment extends Fragment {
                     String body = nextItem.first.getString(4);
                     Long date = nextItem.first.getLong(2);
                     boolean isMe = false;
-                    if (nextItem.first.getInt(6) == 2) {
+                    if (SmsMessageModel.isFromMe(nextItem.first.getInt(6))) {
                         isMe = true;
                     }
-                    SmsMessageModel sms = new SmsMessageModel(id, address, date, threadId, body, isMe);
+                    SmsMessageModel sms = new SmsMessageModel(id, address, date, threadId, body, isMe, nextItem.first.getInt(10) == 8);
                     mMessages.add(sms);
                 }
             }
@@ -253,23 +424,35 @@ public class ThreadDetailViewFragment extends Fragment {
     public class ThreadDetailViewAdapter extends RecyclerView.Adapter<ThreadDetailViewAdapter.ViewHolder> {
         private List<MessageModel> mDataset;
 
-        public String[] getAddresses(){
-            if (mDataset.size()>0){
+
+
+        public String[] getAddresses() {
+            if (mDataset.size() > 0) {
                 return mDataset.get(0).contactList.getNumbers(true);
             }
             return null;
         }
-        public long getThreadId(){
-            if (mDataset.size()>0){
+
+        public long getThreadId() {
+            if (mDataset.size() > 0) {
                 return mDataset.get(0).threadId;
             }
             return 0;
         }
 
+        private void deleteMessage(MessageModel model){
+            if (model instanceof MmsMessageModel){
+                ActiveDatabases.getMmsDatabase(getActivity()).deleteMessage(model);
+            }
+            else{
+                ActiveDatabases.getSmsDatabase(getActivity()).deleteMessage(model);
+            }
+        }
+
         // Provide a reference to the views for each data item
         // Complex data items may need more than one view per item, and
         // you provide access to all the views for a data item in a view holder
-        public class ViewHolder extends RecyclerView.ViewHolder {
+        public class ViewHolder extends RecyclerView.ViewHolder implements View.OnLongClickListener {
             // each data item is just a string in this case
             public View mRootView;
 
@@ -277,24 +460,48 @@ public class ThreadDetailViewFragment extends Fragment {
             public ViewHolder(View v) {
                 super(v);
                 mRootView = v;
+                mRootView.setOnLongClickListener(this);
             }
 
+            @Override
+            public boolean onLongClick(View v) {
+                new AlertDialog.Builder(getActivity())
+                        .setTitle("Delete entry")
+                        .setMessage("Are you sure you want to delete this entry?")
+                        .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+                                deleteMessage(mDataset.get(getPosition()));
+                                notifyItemRemoved(getPosition());
+                            }
+                        })
+                        .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+                                // do nothing
+                            }
+                        })
+                        .setIcon(android.R.drawable.ic_dialog_alert)
+                        .show();
+
+                return true;
+            }
         }
+
 
         public void updateThread(MessageModel model) {
             int i = 0;
             for (MessageModel m : mDataset) {
-                if (m.id==model.id)
+                if (m.id == model.id)
                     return;
                 if (m.date < model.date)
                     break;
                 i++;
             }
 
-            boolean isScrolled = !(layoutManager.findFirstVisibleItemPosition()==0);
+            boolean isScrolled = !(layoutManager.findFirstVisibleItemPosition() == 0);
             mDataset.add(i, model);
             notifyItemInserted(i);
-            if (!isScrolled && i==0) {
+
+            if (!isScrolled) {
                 getActivity().runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -329,6 +536,7 @@ public class ThreadDetailViewFragment extends Fragment {
                     .inflate(R.layout.thread_detail_view_holder, parent, false);
             // set the view's size, margins, paddings and layout parameters
 
+
             ViewHolder vh = new ViewHolder(v);
             return vh;
         }
@@ -342,7 +550,9 @@ public class ThreadDetailViewFragment extends Fragment {
             //SET NAMES
             String text = "";
             //text = model.contactList.formatNames(";");
-            text = model.senderContact.getName();
+            if (model.senderContact!=null) {
+                text = model.senderContact.getName();
+            }
             //if (model.fromMe == true) text = "Me";
             ((TextView) holder.mRootView.findViewById(R.id.message_from_text)).setText(text);
 

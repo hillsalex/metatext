@@ -21,9 +21,9 @@ public class NotificationReceiver extends BroadcastReceiver{
         switch (action){
             case StaticMessageStrings.NOTIFY_MESSAGE_RECEIVED:
                 Uri uri = intent.getParcelableExtra(StaticMessageStrings.MESSAGE_RECEIVED_URI);
-                boolean hasSms = intent.hasExtra(StaticMessageStrings.MESSAGE_RECEIVED_IS_SMS);
+                boolean hasSms = intent.hasExtra(StaticMessageStrings.MESSAGE_IS_SMS);
                 if (uri==null || hasSms == false) return;
-                boolean isSms = intent.getBooleanExtra(StaticMessageStrings.MESSAGE_RECEIVED_IS_SMS,false);
+                boolean isSms = intent.getBooleanExtra(StaticMessageStrings.MESSAGE_IS_SMS,false);
                 if (isSms) {
                     NotificationFactory.makeNotificationForSms(context, ActiveDatabases.getSmsDatabase(context).getMessageForThreadView(uri));
                 }

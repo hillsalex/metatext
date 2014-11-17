@@ -189,7 +189,7 @@ public class ThreadDetailFragment extends Fragment {
 
                 if (nextItem.second == 0) {
                     Long date = nextItem.first.getLong(2);
-                    MmsMessageModel mms = new MmsMessageModel(nextItem.first.getLong(1), date,Long.parseLong(threadId),false);
+                    MmsMessageModel mms = new MmsMessageModel(nextItem.first.getLong(1), date,Long.parseLong(threadId),false,false);
                     messages.add(mms);
                 } else {
                     Long id = nextItem.first.getLong(1);
@@ -197,10 +197,10 @@ public class ThreadDetailFragment extends Fragment {
                     String body = nextItem.first.getString(4);
                     Long date = nextItem.first.getLong(2);
                     boolean isMe = false;
-                    if (nextItem.first.getInt(6) == 2) {
+                    if (SmsMessageModel.isFromMe(nextItem.first.getInt(6))) {
                         isMe = true;
                     }
-                    SmsMessageModel sms = new SmsMessageModel(id, address,date, Long.parseLong(threadId), body, isMe);
+                    SmsMessageModel sms = new SmsMessageModel(id, address,date, Long.parseLong(threadId), body, isMe,false);
                     messages.add(sms);
                 }
             }

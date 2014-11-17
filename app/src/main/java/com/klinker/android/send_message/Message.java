@@ -39,6 +39,8 @@ public class Message {
     private int type;
     private int delay;
 
+    private int tempId;
+
     /**
      * Default send type, to be sent through SMS or MMS depending on contents
      */
@@ -54,6 +56,14 @@ public class Message {
      */
     public Message() {
         this("", new String[]{""});
+    }
+
+    public void setTempId(int id){
+        tempId = id;
+    }
+
+    public int getTempId(){
+        return tempId;
     }
 
     /**

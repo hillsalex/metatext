@@ -29,11 +29,14 @@ import android.net.wifi.WifiManager;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Telephony;
+import android.support.v4.content.LocalBroadcastManager;
 import android.telephony.PhoneNumberUtils;
 import android.telephony.SmsManager;
 import android.telephony.SmsMessage;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
+
+import com.hillsalex.metatext.StaticMessageStrings;
 import com.klinker.android.logger.Log;
 import android.widget.Toast;
 import com.android.mms.dom.smil.parser.SmilXmlSerializer;
@@ -82,9 +85,13 @@ public class Transaction {
     public static final String NOTIFY_OF_DELIVERY = "com.klinker.android.send_message.NOTIFY_DELIVERY";
     public static final String NOTIFY_OF_MMS = "com.klinker.android.messaging.NEW_MMS_DOWNLOADED";
 
+    private static int currentIdCounter = 0;
+
     public static final long NO_THREAD_ID = 0;
 
-    public int tempMessageId = Integer.MIN_VALUE;
+    public int tempMessageId;
+
+    public Uri endMessageUri=null;
 
     /**
      * Sets context and initializes settings to default values
@@ -111,11 +118,11 @@ public class Transaction {
         if (NOTIFY_SMS_FAILURE.equals(".NOTIFY_SMS_FAILURE")) {
             NOTIFY_SMS_FAILURE = context.getPackageName() + NOTIFY_SMS_FAILURE;
         }
+        tempMessageId = currentIdCounter++;
     }
 
-    public Transaction(Context context, Settings settings, int temporaryId){
-        this(context,settings);
-        this.tempMessageId = temporaryId;
+    public int getTempMessageId(){
+        return tempMessageId;
     }
 
     /**
@@ -200,10 +207,12 @@ public class Transaction {
                 Log.v("send_transaction", "message id: " + messageId);
 
                 // set up sent and delivered pending intents to be used with message request
-                PendingIntent sentPI = PendingIntent.getBroadcast(context, messageId, new Intent(SMS_SENT)
-                        .putExtra("message_uri", messageUri == null ? "" : messageUri.toString()), PendingIntent.FLAG_UPDATE_CURRENT);
-                PendingIntent deliveredPI = PendingIntent.getBroadcast(context, messageId, new Intent(SMS_DELIVERED)
-                        .putExtra("message_uri", messageUri == null ? "" : messageUri.toString()), PendingIntent.FLAG_UPDATE_CURRENT);
+                PendingIntent sentPI = PendingIntent.getBroadcast(context, messageId,
+                        new Intent(SMS_SENT).putExtra("message_uri", messageUri == null ? "" : messageUri.toString()).putExtra("tempId", tempMessageId),
+                        PendingIntent.FLAG_UPDATE_CURRENT);
+                PendingIntent deliveredPI = PendingIntent.getBroadcast(context, messageId,
+                        new Intent(SMS_DELIVERED).putExtra("message_uri", messageUri == null ? "" : messageUri.toString()).putExtra("tempId", tempMessageId),
+                        PendingIntent.FLAG_UPDATE_CURRENT);
 
                 ArrayList<PendingIntent> sPI = new ArrayList<PendingIntent>();
                 ArrayList<PendingIntent> dPI = new ArrayList<PendingIntent>();
@@ -375,7 +384,7 @@ public class Transaction {
         try {
             MmsMessageSender sender = new MmsMessageSender(context, info.location, info.bytes.length);
             sender.sendMessage(info.token);
-
+            endMessageUri = sender.finalUri;
             IntentFilter filter = new IntentFilter();
             filter.addAction(ProgressCallbackEntity.PROGRESS_STATUS_ACTION);
             BroadcastReceiver receiver = new BroadcastReceiver() {
@@ -388,10 +397,32 @@ public class Transaction {
                     // send progress broadcast to update ui if desired...
                     Intent progressIntent = new Intent(MMS_PROGRESS);
                     progressIntent.putExtra("progress", progress);
+                    progressIntent.putExtra("tempId",tempMessageId);
                     context.sendBroadcast(progressIntent);
 
+
+                    Intent localProgressIntent = new Intent(StaticMessageStrings.NOTIFY_SENDING_MESSAGE_PROGRESS);
+                    localProgressIntent.putExtra(StaticMessageStrings.MESSAGE_INTERNAL_ID,tempMessageId);
+                    localProgressIntent.putExtra(StaticMessageStrings.MESSAGE_SENDING_PROGRESS,progress);
+                    localProgressIntent.putExtra(StaticMessageStrings.MESSAGE_IS_SMS,false);
+                    LocalBroadcastManager.getInstance(context).sendBroadcast(localProgressIntent);
+
+
                     if (progress == ProgressCallbackEntity.PROGRESS_COMPLETE) {
-                        context.sendBroadcast(new Intent(REFRESH));
+                        Intent refreshIntent = new Intent(REFRESH);
+                        refreshIntent.putExtra("tempId",tempMessageId);
+                        context.sendBroadcast(refreshIntent);
+
+
+
+                        Intent sentIntent = new Intent(StaticMessageStrings.NOTIFY_SENDING_MESSAGE_SENT);
+                        sentIntent.putExtra(StaticMessageStrings.MESSAGE_INTERNAL_ID,tempMessageId);
+                        sentIntent.putExtra(StaticMessageStrings.MESSAGE_IS_SMS,true);
+                        if (endMessageUri!=null) {
+                            sentIntent.putExtra(StaticMessageStrings.MESSAGE_URI, endMessageUri);
+                        }
+                        LocalBroadcastManager.getInstance(context).sendBroadcast(sentIntent);
+
 
                         try {
                             context.unregisterReceiver(this);
@@ -824,10 +855,17 @@ public class Transaction {
                                 values.put("msg_box", 2);
                                 String where = "_id" + " = '" + id + "'";
                                 context.getContentResolver().update(Uri.parse("content://mms"), values, where, null);
+
+
+                                Intent sentIntent = new Intent(StaticMessageStrings.NOTIFY_SENDING_MESSAGE_SENT);
+                                sentIntent.putExtra(StaticMessageStrings.MESSAGE_INTERNAL_ID,tempMessageId);
+                                sentIntent.putExtra(StaticMessageStrings.MESSAGE_IS_SMS,false);
+                                sentIntent.putExtra(StaticMessageStrings.MESSAGE_URI,Uri.parse("content://mms/"+id));
+                                LocalBroadcastManager.getInstance(context).sendBroadcast(sentIntent);
                             }
                         }
 
-                        context.sendBroadcast(new Intent(REFRESH));
+
 
                         try { context.unregisterReceiver(this); } catch (Exception e) { /* Receiver not registered */ }
 
@@ -903,7 +941,7 @@ public class Transaction {
             if (query != null && query.moveToFirst()) {
                 String id = query.getString(query.getColumnIndex("_id"));
                 query.close();
-
+                endMessageUri = Uri.parse("content://mms/"+id);
                 // mark message as failed
                 ContentValues values = new ContentValues();
                 values.put("msg_box", 5);
@@ -921,6 +959,14 @@ public class Transaction {
 
                 // broadcast that mms has failed and you can notify user from there if you would like
                 context.sendBroadcast(new Intent(MMS_ERROR));
+
+
+                Intent newIntent = new Intent(StaticMessageStrings.NOTIFY_SENDING_MESSAGE_FAILED);
+                newIntent.putExtra(StaticMessageStrings.MESSAGE_INTERNAL_ID,tempMessageId);
+                newIntent.putExtra(StaticMessageStrings.MESSAGE_IS_SMS,false);
+                if (endMessageUri !=null)
+                    newIntent.putExtra(StaticMessageStrings.MESSAGE_URI,endMessageUri);
+                LocalBroadcastManager.getInstance(context).sendBroadcast(newIntent);
 
             }
 
@@ -992,6 +1038,7 @@ public class Transaction {
                 values.put("type", "5");
                 values.put("read", true);
                 context.getContentResolver().update(Uri.parse("content://sms/outbox"), values, "_id=" + id, null);
+                endMessageUri = Uri.parse("content://sms/outbox/"+id);
             }
 
             query.close();
@@ -999,6 +1046,13 @@ public class Transaction {
 
         context.sendBroadcast(new Intent(REFRESH));
         context.sendBroadcast(new Intent(VOICE_FAILED));
+
+
+        Intent newIntent = new Intent(StaticMessageStrings.NOTIFY_SENDING_MESSAGE_FAILED);
+        newIntent.putExtra(StaticMessageStrings.MESSAGE_INTERNAL_ID,tempMessageId);
+        newIntent.putExtra(StaticMessageStrings.MESSAGE_IS_SMS,true);
+        newIntent.putExtra(StaticMessageStrings.MESSAGE_URI,endMessageUri);
+        LocalBroadcastManager.getInstance(context).sendBroadcast(newIntent);
     }
 
     private void successVoice() {
@@ -1012,12 +1066,24 @@ public class Transaction {
                 values.put("type", "2");
                 values.put("read", true);
                 context.getContentResolver().update(Uri.parse("content://sms/outbox"), values, "_id=" + id, null);
+                endMessageUri = Uri.parse("content://sms/outbox/"+id);
             }
 
             query.close();
         }
 
-        context.sendBroadcast(new Intent(REFRESH));
+        Intent refreshIntent = new Intent(REFRESH);
+        refreshIntent.putExtra("tempId",tempMessageId);
+        context.sendBroadcast(refreshIntent);
+
+
+        Intent newIntent = new Intent(StaticMessageStrings.NOTIFY_SENDING_MESSAGE_SENT);
+        newIntent.putExtra(StaticMessageStrings.MESSAGE_INTERNAL_ID,tempMessageId);
+        newIntent.putExtra(StaticMessageStrings.MESSAGE_IS_SMS,true);
+        if (endMessageUri!=null) {
+            newIntent.putExtra(StaticMessageStrings.MESSAGE_URI, endMessageUri);
+        }
+        LocalBroadcastManager.getInstance(context).sendBroadcast(newIntent);
     }
 
     private String fetchRnrSe(String authToken, Context context) throws ExecutionException, InterruptedException {

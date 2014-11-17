@@ -19,9 +19,11 @@ package com.android.mms.transaction;
 
 import android.app.Service;
 import android.content.ContentProviderOperation;
+import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
 import android.database.sqlite.SqliteWrapper;
 import android.net.Uri;
 import android.os.Looper;
@@ -222,14 +224,17 @@ public class NotificationTransaction extends Transaction implements Runnable {
 
                     ArrayList<ContentProviderOperation> ops = new ArrayList<>();
                     ops.add(ContentProviderOperation.newDelete(mUri).build());
-                    new Thread(new Runnable() {
-                        public void run() {
+                    ContentValues retrieveStatusContent = new ContentValues(1);
+                    retrieveStatusContent.put(Telephony.Mms.RETRIEVE_STATUS,-1);
+                    SqliteWrapper.update(mContext,mContext.getContentResolver(),mUri,retrieveStatusContent,null,null);
 
-                        }
-                    }).start();
-                    android.util.Log.d(TAG,"Start delete time: "+ DateFormat.getDateTimeInstance().format(new Date()));
-                    new Database.DeleteFromDatabaseUsingUriTask(mContext,mUri).execute();
-                    android.util.Log.d(TAG,"End delete time: "+ DateFormat.getDateTimeInstance().format(new Date()));
+                    //MmsReceivedService.startDeleteTask(mContext,mUri);
+                    /*
+                    android.util.Log.d(TAG, "Start delete time: " + DateFormat.getDateTimeInstance().format(new Date()));
+                    long id = Long.parseLong(mUri.getLastPathSegment());
+                    SqliteWrapper.delete(mContext,mContext.getContentResolver(),Uri.parse("content://mms/inbox/"),"_id="+id,null);
+                        //new Database.DeleteFromDatabaseUsingUriTask(mContext,mUri).execute();
+                    android.util.Log.d(TAG,"End delete time: "+ DateFormat.getDateTimeInstance().format(new Date()));*/
                     /*try {
                         mContext.getContentResolver().applyBatch("mms", ops);
                     }
@@ -251,6 +256,7 @@ public class NotificationTransaction extends Transaction implements Runnable {
                                             Uri.parse("content://mms-sms/"), "conversations"), "obsolete"), null, null);
 
                     // Notify observers with newly received MM.
+                    Uri toDelete = mUri;
                     mUri = uri;
                     status = STATUS_RETRIEVED;
 
@@ -258,14 +264,15 @@ public class NotificationTransaction extends Transaction implements Runnable {
                     {
                         Intent threadUpdatedIntent = new Intent(StaticMessageStrings.NOTIFY_MESSAGE_RECEIVED);
                         threadUpdatedIntent.putExtra(StaticMessageStrings.MESSAGE_RECEIVED_URI,mUri);
-                        threadUpdatedIntent.putExtra(StaticMessageStrings.MESSAGE_RECEIVED_IS_SMS,false);
+                        threadUpdatedIntent.putExtra(StaticMessageStrings.MESSAGE_IS_SMS,false);
+                        threadUpdatedIntent.putExtra("debug","NotificationTransaction");
                         mContext.sendBroadcast(threadUpdatedIntent);
                     }
 
                     Intent notifyMms = new Intent(mContext,MmsReceivedService.class);
                     notifyMms.setAction(MmsReceivedService.MMS_RECEIVED_AND_DOWNLOADED);
                     notifyMms.putExtra(StaticMessageStrings.MESSAGE_RECEIVED_URI, mUri);
-                    notifyMms.putExtra(StaticMessageStrings.MESSAGE_RECEIVED_IS_SMS,false);
+                    notifyMms.putExtra(StaticMessageStrings.MESSAGE_IS_SMS,false);
                     mContext.startService(notifyMms);
                     //start(context, intent);
 

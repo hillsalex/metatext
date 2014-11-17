@@ -3,6 +3,7 @@ package com.hillsalex.metatext;
 import android.app.Activity;
 import android.app.Application;
 import android.app.Fragment;
+import android.app.NotificationManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -37,10 +38,12 @@ public class ThreadListViewActivity extends Activity {
         }
         @Override
         public void onClick(long threadId, ContactList contacts) {
+
             Intent detailIntent = new Intent(mActivity, ThreadDetailViewActivity.class);
             detailIntent.putExtra("threadId", threadId);
             detailIntent.putExtra("title",contacts.formatNames(";"));
             startActivity(detailIntent);
+
         }
     }
 
@@ -50,7 +53,6 @@ public class ThreadListViewActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_thread_list_view);
         fragment = new ThreadListViewFragment();
-        fragment.setListener(new ThreadClicked(this));
         if (savedInstanceState == null) {
             getFragmentManager().beginTransaction()
                     .add(R.id.container, fragment)
@@ -58,6 +60,7 @@ public class ThreadListViewActivity extends Activity {
         }
         Contact.init(this);
         MmsConfig.init(this);
+        fragment.setListener(new ThreadClicked(this));
     }
 
     @Override
@@ -69,6 +72,7 @@ public class ThreadListViewActivity extends Activity {
         smsSentHandler = new SmsSentHandler(null,this);
         getContentResolver().registerContentObserver(Telephony.Mms.CONTENT_URI,true,mmsSentHandler);
         getContentResolver().registerContentObserver(Telephony.Sms.CONTENT_URI,true,smsSentHandler);
+        fragment.setListener(new ThreadClicked(this));
     }
 
     @Override
@@ -79,6 +83,7 @@ public class ThreadListViewActivity extends Activity {
         getContentResolver().unregisterContentObserver(smsSentHandler);
         mmsSentHandler = null;
         smsSentHandler = null;
+        fragment.setListener(null);
     }
 
     @Override
@@ -108,9 +113,13 @@ public class ThreadListViewActivity extends Activity {
         @Override
         public void onReceive(Context context, Intent intent) {
             Uri uri = intent.getParcelableExtra(StaticMessageStrings.MESSAGE_RECEIVED_URI);
-            boolean hasSms = intent.hasExtra(StaticMessageStrings.MESSAGE_RECEIVED_IS_SMS);
+            boolean hasSms = intent.hasExtra(StaticMessageStrings.MESSAGE_IS_SMS);
+            String type = intent.getStringExtra("debug");
+            if (type!=null && type.equals("RetrieveTransaction")) return;
+
             if (uri==null || hasSms == false) return;
-            boolean isSms = intent.getBooleanExtra(StaticMessageStrings.MESSAGE_RECEIVED_IS_SMS,false);
+            boolean isSms = intent.getBooleanExtra(StaticMessageStrings.MESSAGE_IS_SMS,false);
+
             fragment.notifyNewMessage(uri,isSms);
         }
     };

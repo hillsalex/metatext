@@ -31,12 +31,14 @@ import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Looper;
 import android.provider.Telephony;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 import com.android.mms.util.DownloadManager;
 import com.google.android.mms.pdu_alt.PduHeaders;
 import com.google.android.mms.pdu_alt.PduPersister;
 import com.hillsalex.metatext.R;
+import com.hillsalex.metatext.StaticMessageStrings;
 
 public class RetryScheduler implements Observer {
     private static final String TAG = "RetryScheduler";
@@ -252,6 +254,12 @@ public class RetryScheduler implements Observer {
 
         // broadcast that mms has failed and you can notify user from there if you would like
         context.sendBroadcast(new Intent(com.klinker.android.send_message.Transaction.MMS_ERROR));
+
+
+        Intent newIntent = new Intent(StaticMessageStrings.NOTIFY_SENDING_MESSAGE_FAILED);
+        newIntent.putExtra(StaticMessageStrings.MESSAGE_IS_SMS,true);
+        newIntent.putExtra(StaticMessageStrings.MESSAGE_URI,Uri.parse("content://mms/"+id));
+        LocalBroadcastManager.getInstance(context).sendBroadcast(newIntent);
     }
 
     private int getResponseStatus(long msgID) {

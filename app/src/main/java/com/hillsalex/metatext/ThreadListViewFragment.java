@@ -9,6 +9,7 @@ import android.provider.Telephony;
 import android.support.v4.util.Pair;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.text.Html;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -103,8 +104,8 @@ public class ThreadListViewFragment extends Fragment {
                     threadId = nextItem.first.getLong(0);
                     if (!threadIds.contains(threadId)) {
                         Long date = nextItem.first.getLong(1);
-
-                        MmsMessageModel mms = new MmsMessageModel(nextItem.first.getLong(3), date, threadId, nextItem.first.getInt(4) == Telephony.Mms.MESSAGE_BOX_SENT);
+                        boolean read = (nextItem.first.getInt(5)==1);
+                        MmsMessageModel mms = new MmsMessageModel(nextItem.first.getLong(3), date, threadId, nextItem.first.getInt(4) == Telephony.Mms.MESSAGE_BOX_SENT,read);
                         newMessages.add(mms);
                         threadIds.add(threadId);
                     }
@@ -116,10 +117,11 @@ public class ThreadListViewFragment extends Fragment {
                         String body = nextItem.first.getString(5);
                         Long date = nextItem.first.getLong(1);
                         boolean isMe = false;
-                        if (nextItem.first.getInt(4) == 2) {
+                        if (SmsMessageModel.isFromMe(nextItem.first.getInt(4))) {
                             isMe = true;
                         }
-                        SmsMessageModel sms = new SmsMessageModel(id, address, date, threadId, body, isMe);
+                        boolean read = (nextItem.first.getInt(6)==1);
+                        SmsMessageModel sms = new SmsMessageModel(id, address, date, threadId, body, isMe, read);
                         newMessages.add(sms);
                         threadIds.add(threadId);
                     }
@@ -153,7 +155,8 @@ public class ThreadListViewFragment extends Fragment {
                             if (!seenThreadIds.contains(threadId)) {
                                 count++;
                                 Long date = nextItem.first.getLong(1);
-                                MmsMessageModel mms = new MmsMessageModel(nextItem.first.getLong(3), date, threadId, nextItem.first.getInt(4) == Telephony.Mms.MESSAGE_BOX_SENT);
+                                boolean read = (nextItem.first.getInt(5)==1);
+                                MmsMessageModel mms = new MmsMessageModel(nextItem.first.getLong(3), date, threadId, nextItem.first.getInt(4) == Telephony.Mms.MESSAGE_BOX_SENT,read);
                                 models.add(mms);
                                 seenThreadIds.add(threadId);
                             }
@@ -166,10 +169,11 @@ public class ThreadListViewFragment extends Fragment {
                                 String body = nextItem.first.getString(5);
                                 Long date = nextItem.first.getLong(1);
                                 boolean isMe = false;
-                                if (nextItem.first.getInt(4) == 2) {
+                                if (SmsMessageModel.isFromMe(nextItem.first.getInt(4))) {
                                     isMe = true;
                                 }
-                                SmsMessageModel sms = new SmsMessageModel(id, address, date, threadId, body, isMe);
+                                boolean read = (nextItem.first.getInt(6)==1);
+                                SmsMessageModel sms = new SmsMessageModel(id, address, date, threadId, body, isMe, read);
                                 models.add(sms);
                                 seenThreadIds.add(threadId);
                             }
@@ -227,8 +231,8 @@ public class ThreadListViewFragment extends Fragment {
                     threadId = nextItem.first.getLong(0);
                     if (!threadIds.contains(threadId)) {
                         Long date = nextItem.first.getLong(1);
-
-                        MmsMessageModel mms = new MmsMessageModel(nextItem.first.getLong(3), date, threadId, nextItem.first.getInt(4) == Telephony.Mms.MESSAGE_BOX_SENT);
+                        boolean read = (nextItem.first.getInt(5)==1);
+                        MmsMessageModel mms = new MmsMessageModel(nextItem.first.getLong(3), date, threadId, nextItem.first.getInt(4) == Telephony.Mms.MESSAGE_BOX_SENT,read);
                         mMessages.add(mms);
                         threadIds.add(threadId);
                     }
@@ -240,10 +244,11 @@ public class ThreadListViewFragment extends Fragment {
                         String body = nextItem.first.getString(5);
                         Long date = nextItem.first.getLong(1);
                         boolean isMe = false;
-                        if (nextItem.first.getInt(4) == 2) {
+                        if (SmsMessageModel.isFromMe(nextItem.first.getInt(4))) {
                             isMe = true;
                         }
-                        SmsMessageModel sms = new SmsMessageModel(id, address, date, threadId, body, isMe);
+                        boolean read = (nextItem.first.getInt(6)==1);
+                        SmsMessageModel sms = new SmsMessageModel(id, address, date, threadId, body, isMe, read);
                         mMessages.add(sms);
                         threadIds.add(threadId);
                     }
@@ -308,7 +313,12 @@ public class ThreadListViewFragment extends Fragment {
 
             @Override
             public void onClick(View v) {
-                if (listener != null) listener.onClick(mDataset.get(getPosition()).threadId,mDataset.get(getPosition()).contactList);
+                if (listener != null)
+                {
+                    listener.onClick(mDataset.get(getPosition()).threadId,mDataset.get(getPosition()).contactList);
+                    mDataset.get(getPosition()).read=true;
+                    notifyItemChanged(getPosition());
+                }
             }
         }
 
@@ -346,7 +356,7 @@ public class ThreadListViewFragment extends Fragment {
                     oldIndex = i;
                 i++;
             }
-            boolean isScrolled = layoutManager.findFirstVisibleItemPosition()==0;
+            boolean isScrolled = !(layoutManager.findFirstVisibleItemPosition()==0);
             if (oldIndex == -1) {
                 mDataset.add(0, model);
                 notifyItemInserted(0);
@@ -407,10 +417,23 @@ public class ThreadListViewFragment extends Fragment {
 
             MessageModel model = mDataset.get(position);
 
+            //Pair<Integer,Integer> readCounts = model.getCachedUnreadCount(getActivity());
+            boolean read = model.read;//readCounts.first==0;
+
             //SET NAMES
             String text = "";
             text = model.contactList.formatNames(";");
-            ((TextView) holder.mRootView.findViewById(R.id.list_view_address_name)).setText(text);
+
+            if (read) {
+                ((TextView) holder.mRootView.findViewById(R.id.list_view_address_name)).setText(
+                        text//+" ("+readCounts.second+")"
+                );
+            }
+            else{
+                ((TextView) holder.mRootView.findViewById(R.id.list_view_address_name)).setText(
+                        Html.fromHtml("<b>" + text +"</b>")//" ("+readCounts.first+ "/"+readCounts.second+")</b>")
+                );
+            }
 
 
             //SET BODY
@@ -418,11 +441,24 @@ public class ThreadListViewFragment extends Fragment {
             if (mDataset.get(position) instanceof SmsMessageModel) {
                 body = model.body;
             } else if (model.body.equals("")) {
-                body = "MMS no text";
+                body = "MMS";
             } else {
-                body = "Mms: " + model.body;
+                body = model.body;
             }
-            ((TextView) holder.mRootView.findViewById(R.id.list_view_last_message_text)).setText(body);
+
+
+            //SET NAMES
+            //text = model.contactList.formatNames(";");
+            if (read) {
+                ((TextView) holder.mRootView.findViewById(R.id.list_view_last_message_text)).setText(
+                        body
+                );
+            }
+            else{
+                ((TextView) holder.mRootView.findViewById(R.id.list_view_last_message_text)).setText(
+                        Html.fromHtml("<b>" + body + "</b>")
+                );
+            }
 
 
             //SET DATE

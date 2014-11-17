@@ -927,6 +927,9 @@ public class Contact extends Model{
         private byte[] loadAvatarData(Contact entry) {
             byte [] data = null;
 
+            if(true)
+                return null;
+
             if ((!entry.mIsMe && entry.mPersonId == 0) || entry.mAvatar != null) {
                 return null;
             }

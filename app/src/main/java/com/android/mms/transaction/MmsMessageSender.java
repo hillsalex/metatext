@@ -55,6 +55,8 @@ public class MmsMessageSender implements MessageSender {
     private static final String DELIVERY_REPORT_PREFERENCE = "delivery_reports";
     private static final String READ_REPORT_PREFERENCE = "read_reports";
 
+    public Uri finalUri = null;
+
     public MmsMessageSender(Context context, Uri location, long messageSize) {
         mContext = context;
         mMessageUri = location;
@@ -112,12 +114,12 @@ public class MmsMessageSender implements MessageSender {
                 Uri uri = SqliteWrapper.insert(mContext, mContext.getContentResolver(),
                         Telephony.MmsSms.PendingMessages.CONTENT_URI, values);
             } catch (Throwable e) {
-                p.move(mMessageUri, Telephony.Mms.Outbox.CONTENT_URI);
+                finalUri=p.move(mMessageUri, Telephony.Mms.Outbox.CONTENT_URI);
             }
         } else {
-            p.move(mMessageUri, Telephony.Mms.Outbox.CONTENT_URI);
+            finalUri=p.move(mMessageUri, Telephony.Mms.Outbox.CONTENT_URI);
         }
-
+        if(finalUri == null) finalUri = mMessageUri;
         // Start MMS transaction service
         try {
             SendingProgressTokenManager.put(messageId, token);
