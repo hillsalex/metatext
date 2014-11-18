@@ -14,9 +14,11 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.provider.Telephony;
+import android.support.v4.app.ActivityOptionsCompat;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.view.WindowManager;
 
 import com.android.mms.MmsConfig;
@@ -41,12 +43,18 @@ public class ThreadListViewActivity extends Activity {
             mActivity = activity;
         }
         @Override
-        public void onClick(long threadId, ContactList contacts) {
+        public void onClick(long threadId, ContactList contacts, View view) {
+            int[] loc = new int[2];
+            view.getLocationInWindow(loc);
+            Log.d("ThreadListViewFragment","Transition x:" + view.getLeft() + " y:"+view.getTop() + " width:" + view.getWidth() + " height:" + view.getHeight());
+            Log.d("ThreadListViewFragment","Transition (correct?) x:" + loc[0] + " y:"+loc[1] + " width:" + view.getWidth() + " height:" + view.getHeight());
+            Bundle mAnimate = ActivityOptionsCompat.makeScaleUpAnimation(view,loc[0],loc[1],view.getWidth(),view.getHeight()).toBundle();
 
             Intent detailIntent = new Intent(mActivity, ThreadDetailViewActivity.class);
+
             detailIntent.putExtra("threadId", threadId);
             detailIntent.putExtra("title",contacts.formatNames(";"));
-            startActivity(detailIntent);
+            startActivity(detailIntent,mAnimate);
 
         }
     }
@@ -64,8 +72,8 @@ public class ThreadListViewActivity extends Activity {
         SystemBarTintManager tintManager = new SystemBarTintManager(this);
         tintManager.setStatusBarTintEnabled(true);
         tintManager.setNavigationBarTintEnabled(true);
-        tintManager.setStatusBarTintResource(R.color.teal700);
-        tintManager.setNavigationBarTintResource(R.color.teal700);
+        tintManager.setStatusBarTintResource(R.color.teal500);
+        tintManager.setNavigationBarTintResource(R.color.teal500);
 
         fragment = new ThreadListViewFragment();
         if (savedInstanceState == null) {

@@ -27,8 +27,8 @@ public class ThreadDetailViewActivity extends Activity {
         SystemBarTintManager tintManager = new SystemBarTintManager(this);
         tintManager.setStatusBarTintEnabled(true);
         tintManager.setNavigationBarTintEnabled(true);
-        tintManager.setStatusBarTintResource(R.color.teal700);
-        tintManager.setNavigationBarTintResource(R.color.teal700);
+        tintManager.setStatusBarTintResource(R.color.teal500);
+        tintManager.setNavigationBarTintResource(R.color.teal500);
 
 
 

@@ -36,6 +36,7 @@ import com.hillsalex.metatext.model.Contact;
 import com.hillsalex.metatext.model.MessageModel;
 import com.hillsalex.metatext.model.MmsMessageModel;
 import com.hillsalex.metatext.model.SmsMessageModel;
+import com.hillsalex.metatext.util.Logger;
 import com.klinker.android.send_message.Message;
 import com.klinker.android.send_message.Settings;
 import com.klinker.android.send_message.Transaction;
@@ -66,6 +67,8 @@ public class ThreadDetailViewFragment extends Fragment {
 
     ContentObserver smsSentByOtherProcessHandler;
 
+
+    private final String TAG = "ThreadDetailViewFragment";
 
     @Override
     public void onResume() {
@@ -190,9 +193,14 @@ public class ThreadDetailViewFragment extends Fragment {
 
 
     private class LoaderTask extends AsyncTask<SortMultipleCursor, SortMultipleCursor, Pair<List<MessageModel>, SortMultipleCursor>> {
+
+        private long startMils=0;
+
         @Override
         protected Pair<List<MessageModel>, SortMultipleCursor> doInBackground(SortMultipleCursor... params) {
-            Log.v("ThreadDetailVewFrag","Loader task doInBackground started");
+            if (Logger.PERF_ENABLED){
+                startMils = System.currentTimeMillis();
+            }
             List<MessageModel> models = new ArrayList<>();
             SortMultipleCursor cursor = params[0];
             int count = 0;
@@ -223,14 +231,17 @@ public class ThreadDetailViewFragment extends Fragment {
                 }
 
             }
-            Log.v("ThreadDetailVewFrag","Loader finished loading 10");
+
             return new Pair<>(models, cursor);
         }
 
         @Override
         protected void onPostExecute(Pair<List<MessageModel>, SortMultipleCursor> models) {
             super.onPostExecute(models);
-            Log.v("ThreadDetailVewFrag", "Loader on post-execute");
+
+            if (Logger.PERF_ENABLED){
+                Logger.LogPerf(TAG,"loading 10 messages from thread:" + threadId,System.currentTimeMillis() - startMils);
+            }
             try {
                 if (getActivity() != null) {
                     getActivity().runOnUiThread(new AddElementsRunnable(adapter, models.first));

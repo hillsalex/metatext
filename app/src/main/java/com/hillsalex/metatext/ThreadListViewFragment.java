@@ -23,6 +23,7 @@ import com.hillsalex.metatext.model.ContactList;
 import com.hillsalex.metatext.model.MessageModel;
 import com.hillsalex.metatext.model.MmsMessageModel;
 import com.hillsalex.metatext.model.SmsMessageModel;
+import com.hillsalex.metatext.util.Logger;
 import com.klinker.android.logger.Log;
 import com.squareup.picasso.Picasso;
 
@@ -43,6 +44,8 @@ public class ThreadListViewFragment extends Fragment {
     MyAdapter adapter;
     ThreadClickedListener listener;
     LinearLayoutManager layoutManager;
+
+    private final String TAG = "ThreadListViewFragment";
 
     public ThreadListViewFragment() {
 
@@ -140,8 +143,13 @@ public class ThreadListViewFragment extends Fragment {
     Set<Long> seenThreadIds = new HashSet<>();
 
     private class LoaderTask extends AsyncTask<SortMultipleCursor, SortMultipleCursor, Pair<List<MessageModel>,SortMultipleCursor>> {
+        private long startMils=0;
+
         @Override
         protected Pair<List<MessageModel>,SortMultipleCursor> doInBackground(SortMultipleCursor... params) {
+            if (Logger.PERF_ENABLED){
+                startMils = System.currentTimeMillis();
+            }
             List<MessageModel> models = new ArrayList<>();
             SortMultipleCursor cursor = params[0];
             int count = 0;
@@ -189,6 +197,9 @@ public class ThreadListViewFragment extends Fragment {
         @Override
         protected void onPostExecute(Pair<List<MessageModel>,SortMultipleCursor> models) {
             super.onPostExecute(models);
+            if (Logger.PERF_ENABLED){
+                Logger.LogPerf(TAG,"loading 10 messages",System.currentTimeMillis() - startMils);
+            }
             try {
                 if (getActivity() != null) {
                     getActivity().runOnUiThread(new AddElementsRunnable(adapter, models.first));
@@ -277,7 +288,7 @@ public class ThreadListViewFragment extends Fragment {
 
 
     public static abstract class ThreadClickedListener {
-        public abstract void onClick(long threadId, ContactList contacts);
+        public abstract void onClick(long threadId, ContactList contacts, View v);
     }
 
     public static class AddElementsRunnable implements Runnable{
@@ -318,7 +329,7 @@ public class ThreadListViewFragment extends Fragment {
             public void onClick(View v) {
                 if (listener != null)
                 {
-                    listener.onClick(mDataset.get(getPosition()).threadId,mDataset.get(getPosition()).contactList);
+                    listener.onClick(mDataset.get(getPosition()).threadId,mDataset.get(getPosition()).contactList,v);
                     mDataset.get(getPosition()).read=true;
                     notifyItemChanged(getPosition());
                 }
