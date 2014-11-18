@@ -9,12 +9,15 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.ContentObserver;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.provider.Telephony;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.WindowManager;
 
 import com.android.mms.MmsConfig;
 import com.hillsalex.metatext.database.ActiveDatabases;
@@ -22,6 +25,7 @@ import com.hillsalex.metatext.model.Contact;
 import com.hillsalex.metatext.model.ContactList;
 import com.hillsalex.metatext.model.MessageModel;
 import com.hillsalex.metatext.model.MmsMessageModel;
+import com.readystatesoftware.systembartint.SystemBarTintManager;
 
 
 public class ThreadListViewActivity extends Activity {
@@ -52,6 +56,17 @@ public class ThreadListViewActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_thread_list_view);
+
+
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+
+        SystemBarTintManager tintManager = new SystemBarTintManager(this);
+        tintManager.setStatusBarTintEnabled(true);
+        tintManager.setNavigationBarTintEnabled(true);
+        tintManager.setStatusBarTintResource(R.color.teal700);
+        tintManager.setNavigationBarTintResource(R.color.teal700);
+
         fragment = new ThreadListViewFragment();
         if (savedInstanceState == null) {
             getFragmentManager().beginTransaction()
@@ -115,6 +130,10 @@ public class ThreadListViewActivity extends Activity {
             Uri uri = intent.getParcelableExtra(StaticMessageStrings.MESSAGE_RECEIVED_URI);
             boolean hasSms = intent.hasExtra(StaticMessageStrings.MESSAGE_IS_SMS);
             String type = intent.getStringExtra("debug");
+            String toPrint = "Type: ";
+            if (type==null) toPrint+= "null";
+            else toPrint+= type;
+            Log.d("ListViewActivity",toPrint);
             if (type!=null && type.equals("RetrieveTransaction")) return;
 
             if (uri==null || hasSms == false) return;

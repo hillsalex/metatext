@@ -10,6 +10,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.ContentObserver;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -175,6 +176,7 @@ public class ThreadDetailViewFragment extends Fragment {
                             message = new Message(toSend, addresses[0]);
                             message.setTempId(tempId);
                         }
+                        message.setType(Message.TYPE_SMSMMS);
                         t.sendNewMessage(message, adapter.getThreadId());
                     }
                 }
@@ -365,13 +367,13 @@ public class ThreadDetailViewFragment extends Fragment {
     public void notifyNewMessage(Uri uri, boolean isSms) {
         if (!isSms) {
             MmsMessageModel model = ActiveDatabases.getMmsDatabase(getActivity()).getMessageForThreadView(uri);
-            if (model.threadId == threadId) {
+            if (model!=null && model.threadId == threadId) {
                 ActiveDatabases.getMmsSmsDatabase(getActivity()).markThreadAsRead(threadId);
                 getActivity().runOnUiThread(new AddElementsToFrontAndScrollRunnable(adapter,model));
             }
         } else {
             SmsMessageModel model = ActiveDatabases.getSmsDatabase(getActivity()).getMessageForThreadView(uri);
-            if (model.threadId == threadId) {
+            if (model != null && model.threadId == threadId) {
                 ActiveDatabases.getMmsSmsDatabase(getActivity()).markThreadAsRead(threadId);
                 getActivity().runOnUiThread(new AddElementsToFrontAndScrollRunnable(adapter,model));
             }

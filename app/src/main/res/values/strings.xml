@@ -33,5 +33,6 @@
     <!-- Name of the local user when displaying sender of an outgoing message (personal pronoun) -->
     <string name="messagelist_sender_self">Me</string>
     <string name="title_activity_thread_detail_view">ThreadDetailView</string>
+    <string name="title_activity_test">TestActivity</string>
 
 </resources>

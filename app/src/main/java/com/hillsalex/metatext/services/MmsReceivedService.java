@@ -28,6 +28,7 @@ public class MmsReceivedService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if (intent==null)return Service.START_STICKY;
         String action = intent.getAction();
         Uri uri;
         switch(action) {

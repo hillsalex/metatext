@@ -196,6 +196,7 @@ public class PduPersister {
         MESSAGE_BOX_MAP.put(Uri.parse("content://mms/sent"),   2);
         MESSAGE_BOX_MAP.put(Uri.parse("content://mms/drafts"),  3);
         MESSAGE_BOX_MAP.put(Uri.parse("content://mms/outbox"), 4);
+        MESSAGE_BOX_MAP.put(Uri.parse("content://mms/temp"), 5);
 
         CHARSET_COLUMN_INDEX_MAP = new HashMap<Integer, Integer>();
         CHARSET_COLUMN_INDEX_MAP.put(PduHeaders.SUBJECT, PDU_COLUMN_SUBJECT_CHARSET);

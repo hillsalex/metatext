@@ -1,22 +1,13 @@
 package com.hillsalex.metatext;
 
 import android.app.Activity;
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.database.ContentObserver;
-import android.net.Uri;
+import android.graphics.Color;
 import android.os.Bundle;
-import android.os.Handler;
-import android.support.v4.content.LocalBroadcastManager;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.WindowManager;
 
-import com.hillsalex.metatext.database.ActiveDatabases;
-import com.hillsalex.metatext.model.SmsMessageModel;
-import com.klinker.android.send_message.Transaction;
+import com.readystatesoftware.systembartint.SystemBarTintManager;
 
 
 public class ThreadDetailViewActivity extends Activity {
@@ -29,6 +20,17 @@ public class ThreadDetailViewActivity extends Activity {
         super.onCreate(savedInstanceState);
         mInstance = this;
         setContentView(R.layout.activity_thread_detail_view);
+
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+
+        SystemBarTintManager tintManager = new SystemBarTintManager(this);
+        tintManager.setStatusBarTintEnabled(true);
+        tintManager.setNavigationBarTintEnabled(true);
+        tintManager.setStatusBarTintResource(R.color.teal700);
+        tintManager.setNavigationBarTintResource(R.color.teal700);
+
+
 
         Bundle arguments = new Bundle();
 
@@ -54,7 +56,6 @@ public class ThreadDetailViewActivity extends Activity {
                     .commit();
         }
     }
-
 
 
     @Override

@@ -18,6 +18,7 @@
 package com.android.mms.transaction;
 
 import android.app.Service;
+import android.content.ContentProviderClient;
 import android.content.ContentProviderOperation;
 import android.content.ContentResolver;
 import android.content.ContentValues;
@@ -42,8 +43,10 @@ import com.google.android.mms.pdu_alt.PduComposer;
 import com.google.android.mms.pdu_alt.PduHeaders;
 import com.google.android.mms.pdu_alt.PduParser;
 import com.google.android.mms.pdu_alt.PduPersister;
+import com.google.android.mms.util_alt.PduCache;
 import com.hillsalex.metatext.StaticMessageStrings;
 import com.hillsalex.metatext.database.Database;
+import com.hillsalex.metatext.services.DeleteNotificationIndService;
 import com.hillsalex.metatext.services.MmsReceivedService;
 import com.klinker.android.logger.Log;
 
@@ -130,6 +133,8 @@ public class NotificationTransaction extends Transaction implements Runnable {
                 group = PreferenceManager.getDefaultSharedPreferences(context).getBoolean("group_message", true);
             }
 
+
+
             mUri = PduPersister.getPduPersister(context).persist(
                         ind, Uri.parse("content://mms/inbox"), !allowAutoDownload(context),
                         group, null);
@@ -197,6 +202,7 @@ public class NotificationTransaction extends Transaction implements Runnable {
             try {
                 retrieveConfData = getPdu(mContentLocation);
             } catch (IOException e) {
+                e.printStackTrace();
                 mTransactionState.setState(FAILED);
             }
 
@@ -229,12 +235,15 @@ public class NotificationTransaction extends Transaction implements Runnable {
                     SqliteWrapper.update(mContext,mContext.getContentResolver(),mUri,retrieveStatusContent,null,null);
 
                     //MmsReceivedService.startDeleteTask(mContext,mUri);
-                    /*
+
                     android.util.Log.d(TAG, "Start delete time: " + DateFormat.getDateTimeInstance().format(new Date()));
-                    long id = Long.parseLong(mUri.getLastPathSegment());
-                    SqliteWrapper.delete(mContext,mContext.getContentResolver(),Uri.parse("content://mms/inbox/"),"_id="+id,null);
+                    Intent deleteIntent = new Intent(mContext, DeleteNotificationIndService.class);
+                    deleteIntent.setAction(DeleteNotificationIndService.DELETE_NOTIFICATION_IND_ACTION);
+                    deleteIntent.putExtra(DeleteNotificationIndService.DELETE_NOTIFICATION_IND_URI,mUri);
+                    mContext.startService(deleteIntent);
+                    //SqliteWrapper.delete(mContext,mContext.getContentResolver(),mUri,null,null);
                         //new Database.DeleteFromDatabaseUsingUriTask(mContext,mUri).execute();
-                    android.util.Log.d(TAG,"End delete time: "+ DateFormat.getDateTimeInstance().format(new Date()));*/
+                    android.util.Log.d(TAG,"End delete time: "+ DateFormat.getDateTimeInstance().format(new Date()));
                     /*try {
                         mContext.getContentResolver().applyBatch("mms", ops);
                     }

@@ -263,11 +263,14 @@ public class ThreadListViewFragment extends Fragment {
     }
 
     public void notifyNewMessage(Uri uri, boolean isSms) {
+        Log.i("ListViewFragment","New message notification");
         if (!isSms) {
             MmsMessageModel model = ActiveDatabases.getMmsDatabase(getActivity()).getMessageForThreadView(uri);
+            if (model != null)
             adapter.updateThread(model);
         } else {
             SmsMessageModel model = ActiveDatabases.getSmsDatabase(getActivity()).getMessageForThreadView(uri);
+            if (model != null)
             adapter.updateThread(model);
         }
     }

@@ -23,7 +23,7 @@ public class SmsDatabase extends Database {
     public SmsDatabase(Context context){super(context);}
 
     public Cursor getThreadsAndDates(){
-        final String[] projection = new String[]{"DISTINCT thread_id","date", "_id","address","type","body","read"};
+        final String[] projection = new String[]{"thread_id","date", "_id","address","type","body","read"};
         //final String selection = "thread_id IS NOT NULL) GROUP BY (thread_id";
         final String selection = null;
         return mContext.getContentResolver().query(Telephony.Sms.CONTENT_URI,projection,selection,null,null);

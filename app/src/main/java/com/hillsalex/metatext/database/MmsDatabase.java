@@ -36,15 +36,20 @@ public class MmsDatabase extends Database {
     public Cursor getThreadsAndDates(){
         final String[] projection = new String[]{"DISTINCT thread_id","date * 1000", "m_id", "_id", Telephony.Mms.MESSAGE_BOX,Telephony.Mms.READ};
         //final String selection = "thread_id IS NOT NULL) GROUP BY (thread_id";
-        final String selection = null;
+        final String selection = "m_type!=130";
+
         return mContext.getContentResolver().query(Telephony.Mms.CONTENT_URI,projection,selection,null,null);
     }
+
+
 
     public int deleteMessage(MessageModel model){
         if (!(model instanceof MmsMessageModel) || model.isFake){
             return 0;
         }
-        int numDeleted = mContext.getContentResolver().delete(Telephony.Mms.CONTENT_URI, "_id="+model.id,null);
+        int numDeleted = 0;
+        Log.d("MmsDatabase","Trying to delete: " + Telephony.Mms.CONTENT_URI.toString() + "/" + model.id);
+        numDeleted = mContext.getContentResolver().delete(Telephony.Mms.CONTENT_URI, "_id="+model.id,null);
         return numDeleted;
     }
 
@@ -122,20 +127,21 @@ public class MmsDatabase extends Database {
     }
     public Cursor getThreadsAndDatesPastDate(long date){
         final String[] projection = new String[]{"DISTINCT thread_id","date * 1000", "m_id", "_id", Telephony.Mms.MESSAGE_BOX,Telephony.Mms.READ};
-        final String selection = Telephony.Mms.DATE + " * 1000 > "+date;
+        final String selection = Telephony.Mms.DATE + " * 1000 > "+date + " AND m_type!=130";
         //final String selection = null;
         return mContext.getContentResolver().query(Telephony.Mms.CONTENT_URI,projection,selection,null,null);
     }
 
     public MmsMessageModel getMessageForThreadView(Uri uri){
-        final String[] projection = new String[]{"thread_id","date * 1000", "m_id", "_id", Telephony.Mms.MESSAGE_BOX,Telephony.Mms.READ};
+        final String[] projection = new String[]{"thread_id","date * 1000", "m_id", "_id", Telephony.Mms.MESSAGE_BOX,Telephony.Mms.READ, Telephony.Mms.MESSAGE_TYPE};
         Cursor query = mContext.getContentResolver().query(uri,projection,null,null,null);
-        if (query!=null && query.moveToFirst()) {
+        if (query!=null && query.moveToFirst() && query.getInt(6) != 130) {
             MmsMessageModel model = new MmsMessageModel(query.getLong(3),query.getLong(1),query.getLong(0),query.getInt(4)== Telephony.Mms.MESSAGE_BOX_SENT, query.getInt(5)==1);
             query.close();
             return model;
         }
-        else return null;
+        query.close();
+        return null;
     }
 /*
     public void populateMmsMessageModel(MmsMessageModel model){

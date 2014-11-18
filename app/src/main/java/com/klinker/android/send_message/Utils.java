@@ -4,10 +4,15 @@ import android.accounts.Account;
 import android.accounts.AccountManager;
 import android.accounts.AuthenticatorException;
 import android.accounts.OperationCanceledException;
+import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkInfo;
+import android.net.NetworkRequest;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -57,23 +62,74 @@ public class Utils {
                 context.getSystemService(Context.TELEPHONY_SERVICE);
         return mTelephonyMgr.getLine1Number();
     }
-
     /**
      * Enable mobile connection for a specific address
-     *
+     * @param context a Context (application or activity)
      * @param address the address to enable
      * @return true for success, else false
      */
-    public static void forceMobileConnectionForAddress(ConnectivityManager mConnMgr, String address) {
+    private static boolean forceMobileConnectionForAddress(Context context, String address) {
+        final String TAG_LOG = "ForceMobileConnection";
+        ConnectivityManager connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (null == connectivityManager) {
+            android.util.Log.d(TAG_LOG, "ConnectivityManager is null, cannot try to force a mobile connection");
+            return false;
+        }
+
+        //check if mobile connection is available and connected
+        NetworkInfo.State state = connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_MOBILE_HIPRI).getState();
+        android.util.Log.d(TAG_LOG, "TYPE_MOBILE_HIPRI network state: " + state);
+        if (0 == state.compareTo(NetworkInfo.State.CONNECTED) || 0 == state.compareTo(NetworkInfo.State.CONNECTING)) {
+            return true;
+        }
+
+        //activate mobile connection in addition to other connection already activated
+        int resultInt = connectivityManager.startUsingNetworkFeature(ConnectivityManager.TYPE_MOBILE, "enableHIPRI");
+        android.util.Log.d(TAG_LOG, "startUsingNetworkFeature for enableHIPRI result: " + resultInt);
+
+        //-1 means errors
+        // 0 means already enabled
+        // 1 means enabled
+        // other values can be returned, because this method is vendor specific
+        if (-1 == resultInt) {
+            android.util.Log.e(TAG_LOG, "Wrong result of startUsingNetworkFeature, maybe problems");
+            return false;
+        }
+        if (0 == resultInt) {
+            android.util.Log.e(TAG_LOG, "No need to perform additional network settings");
+            return true;
+        }
+
         //find the host name to route
         String hostName = extractAddressFromUrl(address);
+        android.util.Log.d(TAG_LOG, "Source address: " + address);
+        android.util.Log.d(TAG_LOG, "Destination host address to route: " + hostName);
         if (TextUtils.isEmpty(hostName)) hostName = address;
 
         //create a route for the specified address
         int hostAddress = lookupHost(hostName);
-        mConnMgr.requestRouteToHost(ConnectivityManager.TYPE_MOBILE_MMS, hostAddress);
-    }
+        if (-1 == hostAddress) {
+            android.util.Log.e(TAG_LOG, "Wrong host address transformation, result was -1");
+            return false;
+        }
+        //wait some time needed to connection manager for waking up
+        try {
+            for (int counter=0; counter<30; counter++) {
+                NetworkInfo.State checkState = connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_MOBILE_HIPRI).getState();
+                if (0 == checkState.compareTo(NetworkInfo.State.CONNECTED))
+                    break;
+                Thread.sleep(1000);
+            }
+        } catch (InterruptedException e) {
+            //nothing to do
+        }
+        boolean resultBool = connectivityManager.requestRouteToHost(ConnectivityManager.TYPE_MOBILE_HIPRI, hostAddress);
+        android.util.Log.d(TAG_LOG, "requestRouteToHost result: " + resultBool);
+        if (!resultBool)
+            android.util.Log.e(TAG_LOG, "Wrong requestRouteToHost result: expected true, but was false");
 
+        return resultBool;
+    }
     /**
      * Function for getting the weird auth token used to send or receive google voice messages
      *
@@ -170,33 +226,47 @@ public class Utils {
                 (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
         connMgr.startUsingNetworkFeature(ConnectivityManager.TYPE_MOBILE_HIPRI, "enableMMS");
 
-        Log.v("sending_mms_library", "ensuring route to host");
 
-        int inetAddr;
-        if (proxy != null && !proxy.equals("")) {
-            String proxyAddr = proxy;
-            inetAddr = lookupHost(proxyAddr);
-            if (inetAddr == -1) {
-                throw new IOException("Cannot establish route for " + url + ": Unknown host");
+            Log.v("sending_mms_library", "ensuring route to host");
+
+            int inetAddr;
+            if (proxy != null && !proxy.equals("")) {
+                String proxyAddr = proxy;
+                inetAddr = lookupHost(proxyAddr);
+                if (inetAddr == -1) {
+                    throw new IOException("Cannot establish route for " + url + ": Unknown host");
+                } else {
+//                    if(!forceMobileConnectionForAddress(context,proxyAddr))
+//                    {
+//                        throw new IOException("Cannot establish route to proxy " + inetAddr);
+//                    }
+
+                    if (!connMgr.requestRouteToHost(
+                            ConnectivityManager.TYPE_MOBILE_MMS, inetAddr)) {
+                        throw new IOException("Cannot establish route to proxy " + inetAddr);
+                    }
+                }
             } else {
-                if (!connMgr.requestRouteToHost(
-                        ConnectivityManager.TYPE_MOBILE_MMS, inetAddr)) {
-                    throw new IOException("Cannot establish route to proxy " + inetAddr);
+                Uri uri = Uri.parse(url);
+                inetAddr = lookupHost(uri.getHost());
+                if (inetAddr == -1) {
+                    throw new IOException("Cannot establish route for " + url + ": Unknown host");
+                } else {
+//                    if(!forceMobileConnectionForAddress(context,url))
+//                    {
+//                        throw new IOException("Cannot establish route to proxy " + inetAddr);
+//                    }
+
+                    if (!connMgr.requestRouteToHost(
+                            ConnectivityManager.TYPE_MOBILE_MMS, inetAddr)) {
+                        throw new IOException("Cannot establish route to " + inetAddr + " for " + url);
+                    }
                 }
             }
-        } else {
-            Uri uri = Uri.parse(url);
-            inetAddr = lookupHost(uri.getHost());
-            if (inetAddr == -1) {
-                throw new IOException("Cannot establish route for " + url + ": Unknown host");
-            } else {
-                if (!connMgr.requestRouteToHost(
-                        ConnectivityManager.TYPE_MOBILE_MMS, inetAddr)) {
-                    throw new IOException("Cannot establish route to " + inetAddr + " for " + url);
-                }
-            }
-        }
+
+
     }
+
 
     /**
      * Checks whether or not mobile data is enabled and returns the result
@@ -351,6 +421,7 @@ public class Utils {
         SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(context);
         Settings sendSettings = new Settings();
         String mmsc = sharedPrefs.getString("mmsc_url", "NOPE");
+        mmsc = "NOPE";
         if (mmsc.equals("NOPE")){
             MmsConnection.Apn apn=null;
             try {
